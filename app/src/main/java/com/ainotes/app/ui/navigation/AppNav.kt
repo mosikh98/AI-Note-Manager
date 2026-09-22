@@ -2,6 +2,9 @@ package com.ainotes.app.ui.navigation
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -28,8 +31,9 @@ object Routes {
 fun AppNav(container: AppContainer, onboardingDone: Boolean) {
     val nav = rememberNavController()
     val start = if (onboardingDone) Routes.HOME else Routes.ONBOARDING
-    val easing = tween<androidx.compose.ui.unit.IntOffset>(320)
+    val easing = tween<androidx.compose.ui.unit.IntOffset>(420)
 
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
     NavHost(
         navController = nav,
         startDestination = start,
@@ -86,5 +90,6 @@ fun AppNav(container: AppContainer, onboardingDone: Boolean) {
                 onBack = { nav.popBackStack() }
             )
         }
+    }
     }
 }

@@ -3,10 +3,14 @@ package com.ainotes.app.ui.editor
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -98,10 +102,10 @@ fun EditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (state.loaded) "Note" else "Loading...") },
+                title = { Text(if (state.loaded) "یادداشت" else "در حال بارگذاری...") },
                 navigationIcon = {
                     IconButton(onClick = { vm.persist(); onBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت")
                     }
                 },
                 actions = {
@@ -109,22 +113,22 @@ fun EditorScreen(
                         Text("#", fontWeight = FontWeight.Bold)
                     }
                     IconButton(onClick = { showExport = true }) {
-                        Icon(Icons.Filled.FileDownload, contentDescription = "Export")
+                        Icon(Icons.Filled.FileDownload, contentDescription = "برون‌بری")
                     }
                     IconButton(onClick = vm::toggleFavorite) {
                         Icon(
                             if (state.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                            contentDescription = "Favorite"
+                            contentDescription = "علاقه"
                         )
                     }
                     IconButton(onClick = { preview = !preview }) {
                         Icon(
                             if (preview) Icons.Filled.Edit else Icons.Filled.Visibility,
-                            contentDescription = if (preview) "Edit" else "Preview"
+                            contentDescription = if (preview) "ویرایش" else "پیش‌نمایش"
                         )
                     }
                     IconButton(onClick = { vm.persist() }) {
-                        Icon(Icons.Filled.Save, contentDescription = "Save")
+                        Icon(Icons.Filled.Save, contentDescription = "ذخیره")
                     }
                 }
             )
@@ -133,7 +137,7 @@ fun EditorScreen(
             ExtendedFloatingActionButton(
                 onClick = { showAiSheet = true },
                 icon = { Text("\u2728") },
-                text = { Text("Organize with AI") }
+                text = { Text("✨ سازمان‌دهی با AI") }
             )
         }
     ) { padding ->
@@ -148,7 +152,7 @@ fun EditorScreen(
                 value = state.title,
                 onValueChange = vm::onTitle,
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Title") },
+                placeholder = { Text("عنوان") },
                 textStyle = MaterialTheme.typography.headlineSmall,
                 singleLine = true
             )
@@ -179,10 +183,18 @@ fun EditorScreen(
 
             Spacer(Modifier.height(10.dp))
 
-            if (preview) {
+            AnimatedContent(
+                targetState = preview,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(260)) + slideInVertically { it / 14 }) togetherWith
+                        (fadeOut(animationSpec = tween(200)) + slideOutVertically { -it / 14 })
+                },
+                label = "editorMode"
+            ) { isPreview ->
+            if (isPreview) {
                 if (state.content.isBlank()) {
                     Text(
-                        "Nothing to preview yet.",
+                        "چیزی برای پیش‌نمایش نیست.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
@@ -201,14 +213,15 @@ fun EditorScreen(
                         .fillMaxWidth()
                         .height(320.dp),
                     placeholder = {
-                        Text("Write, paste messy text, or tap \u201COrganize with AI\u201D")
+                        Text("بنویس، متن نامرتب بذار، یا روی «✨ سازمان‌دهی با AI» بزن")
                     }
                 )
+            }
             }
 
             if (state.ai.running) {
                 Spacer(Modifier.height(14.dp))
-                LoadingDots(label = state.ai.stage.ifBlank { "Working on it" })
+                LoadingDots(label = state.ai.stage.ifBlank { "در حال انجام..." })
                 LinearProgressIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -229,8 +242,8 @@ fun EditorScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Row {
-                            TextButton(onClick = onOpenProviders) { Text("Open AI settings") }
-                            TextButton(onClick = vm::dismissAi) { Text("Dismiss") }
+                            TextButton(onClick = onOpenProviders) { Text("تنظیمات AI") }
+                            TextButton(onClick = vm::dismissAi) { Text("بستن") }
                         }
                     }
                 }
@@ -250,7 +263,7 @@ fun EditorScreen(
 
             if (state.attachments.isNotEmpty()) {
                 Text(
-                    "ATTACHMENTS",
+                    "پیوست‌ها",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                 )
@@ -295,7 +308,7 @@ fun EditorScreen(
                                 }
                             }) { Text("\u2197") }
                             IconButton(onClick = { vm.removeAttachment(att.id) }) {
-                                Icon(Icons.Filled.Delete, contentDescription = "Remove")
+                                Icon(Icons.Filled.Delete, contentDescription = "حذف")
                             }
                         }
                     }
@@ -311,7 +324,7 @@ fun EditorScreen(
         ModalBottomSheet(onDismissRequest = { showAiSheet = false }) {
             Column(Modifier.padding(bottom = 24.dp)) {
                 Text(
-                    "\u2728 AI Actions",
+                    "✨ اکشن‌های AI",
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                 )
@@ -326,7 +339,7 @@ fun EditorScreen(
                     )
                 }
                 DropdownMenuItem(
-                    text = { Text("Add attachment") },
+                    text = { Text("افزودن فایل پیوست") },
                     leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
                     onClick = {
                         showAiSheet = false
@@ -347,12 +360,12 @@ fun EditorScreen(
     if (showAsk) {
         AlertDialog(
             onDismissRequest = { showAsk = false },
-            title = { Text("Ask AI about this note") },
+            title = { Text("پرسش از AI دربارهٔ این یادداشت") },
             text = {
                 OutlinedTextField(
                     value = askText,
                     onValueChange = { askText = it },
-                    placeholder = { Text("What are the remaining tasks?") }
+                    placeholder = { Text("کارهای باقی‌مونده چیه؟") }
                 )
             },
             confirmButton = {
@@ -360,10 +373,10 @@ fun EditorScreen(
                     showAsk = false
                     vm.runAi(AiAction.ASK, askText)
                     askText = ""
-                }) { Text("Ask") }
+                }) { Text("پرسیدن") }
             },
             dismissButton = {
-                TextButton(onClick = { showAsk = false }) { Text("Cancel") }
+                TextButton(onClick = { showAsk = false }) { Text("انصراف") }
             }
         )
     }
@@ -372,12 +385,12 @@ fun EditorScreen(
         var tagsDraft by remember { mutableStateOf(state.tags.joinToString(", ")) }
         AlertDialog(
             onDismissRequest = { showTags = false },
-            title = { Text("Tags") },
+            title = { Text("تگ‌ها") },
             text = {
                 OutlinedTextField(
                     value = tagsDraft,
                     onValueChange = { tagsDraft = it },
-                    placeholder = { Text("server, work, ideas") }
+                    placeholder = { Text("کاری، ایده‌ها، شخصی") }
                 )
             },
             confirmButton = {
@@ -385,10 +398,10 @@ fun EditorScreen(
                     vm.setTags(tagsDraft)
                     vm.persist()
                     showTags = false
-                }) { Text("Save") }
+                }) { Text("ذخیره") }
             },
             dismissButton = {
-                TextButton(onClick = { showTags = false }) { Text("Cancel") }
+                TextButton(onClick = { showTags = false }) { Text("انصراف") }
             }
         )
     }
@@ -396,9 +409,21 @@ fun EditorScreen(
     if (showExport) {
         AlertDialog(
             onDismissRequest = { showExport = false },
-            title = { Text("Export note") },
+            title = { Text("برون‌بری یادداشت") },
             text = {
                 Column {
+                    Text(
+                        "✨ مسترپیس — اول متن رو با AI به‌شدت بهینه‌سازی کن، بعد خروجی بگیر",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showExport = false
+                                vm.runAi(com.ainotes.app.domain.model.AiAction.MASTERPIECE)
+                            }
+                            .padding(vertical = 10.dp)
+                    )
                     ExportFormat.entries.forEach { format ->
                         Row(
                             Modifier
@@ -417,7 +442,7 @@ fun EditorScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showExport = false }) { Text("Cancel") }
+                TextButton(onClick = { showExport = false }) { Text("انصراف") }
             }
         )
     }
@@ -425,16 +450,16 @@ fun EditorScreen(
     state.exported?.let { out ->
         AlertDialog(
             onDismissRequest = vm::clearExported,
-            title = { Text("Export ready") },
+            title = { Text("خروجی آماده شد") },
             text = { Text(out.name) },
             confirmButton = {
                 TextButton(onClick = {
                     vm.shareExported()
                     vm.clearExported()
-                }) { Text("Share") }
+                }) { Text("اشتراک‌گذاری") }
             },
             dismissButton = {
-                TextButton(onClick = vm::clearExported) { Text("Close") }
+                TextButton(onClick = vm::clearExported) { Text("بستن") }
             }
         )
     }
@@ -455,12 +480,12 @@ private fun AiPreviewDialog(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text("AI result", style = MaterialTheme.typography.titleMedium)
+            Text("نتیجهٔ AI", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
 
             if (compare) {
                 Text(
-                    "ORIGINAL",
+                    "متن اصلی",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
@@ -473,7 +498,7 @@ private fun AiPreviewDialog(
                 )
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    "AI VERSION",
+                    "نسخهٔ AI",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
@@ -483,10 +508,10 @@ private fun AiPreviewDialog(
             Spacer(Modifier.height(14.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilledTonalButton(onClick = onApply) { Text("Apply") }
-                TextButton(onClick = onCancel) { Text("Cancel") }
+                FilledTonalButton(onClick = onApply) { Text("اعمال") }
+                TextButton(onClick = onCancel) { Text("انصراف") }
                 TextButton(onClick = { compare = !compare }) {
-                    Text(if (compare) "Hide original" else "Compare")
+                    Text(if (compare) "پنهان کردن اصل" else "مقایسه")
                 }
             }
         }

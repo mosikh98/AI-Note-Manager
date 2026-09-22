@@ -113,17 +113,23 @@ class EditorViewModel(
     fun persist() {
         val s = _state.value
         viewModelScope.launch {
-            container.repository.saveNote(
-                Note(
-                    id = s.id,
-                    title = s.title,
-                    content = s.content,
-                    tags = s.tags,
-                    createdAt = 0,
-                    updatedAt = System.currentTimeMillis(),
-                    isFavorite = s.isFavorite
+            runCatching {
+                container.repository.saveNote(
+                    Note(
+                        id = s.id,
+                        title = s.title,
+                        content = s.content,
+                        tags = s.tags,
+                        createdAt = 0,
+                        updatedAt = System.currentTimeMillis(),
+                        isFavorite = s.isFavorite
+                    )
                 )
-            )
+            }.onFailure { e ->
+                _state.update {
+                    it.copy(ai = it.ai.copy(error = "ذخیره انجام نشد: " + (e.message ?: e.javaClass.simpleName)))
+                }
+            }
         }
     }
 
@@ -132,7 +138,7 @@ class EditorViewModel(
     fun runAi(action: AiAction, extra: String? = null) {
         val content = _state.value.content
         if (content.isBlank()) {
-            _state.update { it.copy(ai = AiUiState(error = "The note is empty")) }
+            _state.update { it.copy(ai = AiUiState(error = "یادداشت خالیه")) }
             return
         }
         aiJob?.cancel()
@@ -141,7 +147,7 @@ class EditorViewModel(
             val provider = container.repository.activeProvider()
             if (provider == null) {
                 _state.update {
-                    it.copy(ai = AiUiState(action = action, error = "No AI provider configured. Add one in Settings."))
+                    it.copy(ai = AiUiState(action = action, error = "هیچ سرویس AI تنظیم نشده؛ از تنظیمات یکی اضافه کن."))
                 }
                 return@launch
             }
@@ -170,7 +176,7 @@ class EditorViewModel(
                 }
             } catch (e: Exception) {
                 _state.update {
-                    it.copy(ai = AiUiState(action = action, error = e.message ?: "AI request failed"))
+                    it.copy(ai = AiUiState(action = action, error = e.message ?: "درخواست AI ناموفق بود"))
                 }
             }
         }

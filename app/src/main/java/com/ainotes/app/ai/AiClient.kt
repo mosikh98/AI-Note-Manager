@@ -26,7 +26,7 @@ class OpenAiCompatibleClient(private val provider: AiProviderConfig) : AiClient 
         .build()
 
     override suspend fun chat(messages: List<ChatMessage>): String = withContext(Dispatchers.IO) {
-        if (provider.baseUrl.isBlank()) throw AiException("API URL is empty")
+        if (provider.baseUrl.isBlank()) throw AiException("آدرس API خالیه")
         val url = provider.baseUrl.trimEnd('/') + "/chat/completions"
 
         val payload = JSONObject().apply {
@@ -63,11 +63,11 @@ class OpenAiCompatibleClient(private val provider: AiProviderConfig) : AiClient 
         if (!response.isSuccessful) {
             throw AiException(
                 when (response.code) {
-                    401 -> "Invalid API key (401)"
-                    404 -> "Endpoint or model not found (404)"
-                    429 -> "Rate limited (429) - try again shortly"
-                    in 500..599 -> "Server error (${response.code})"
-                    else -> "Request failed (${response.code})"
+                    401 -> "کلید API نامعتبره (401)"
+                    404 -> "مدل یا آدرس endpoint پیدا نشد (404)"
+                    429 -> "محدودیت نرخ (429) - کمی بعد دوباره امتحان کن"
+                    in 500..599 -> "خطای سرور (${response.code})"
+                    else -> "درخواست ناموفق بود (${response.code})"
                 }
             )
         }
@@ -75,7 +75,7 @@ class OpenAiCompatibleClient(private val provider: AiProviderConfig) : AiClient 
             JSONObject(text).getJSONArray("choices")
                 .getJSONObject(0).getJSONObject("message").getString("content")
         } catch (e: Exception) {
-            throw AiException("Unexpected response from the AI server")
+            throw AiException("پاسخ غیرمنتظره از سرور AI")
         }
     }
 }

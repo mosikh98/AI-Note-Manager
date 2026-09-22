@@ -32,5 +32,10 @@ object PromptManager {
                 "Translate the following note to " + (extra ?: "English") + ". Keep formatting:\n\n" + content
             AiAction.ASK ->
                 "Note:\n" + content + "\n\nQuestion: " + (extra ?: "")
+            AiAction.MASTERPIECE ->
+                "Turn the following note into a polished masterpiece ready for export: " +
+                    "tight structure, strong headings, clean lists, refined and precise wording, " +
+                    "consistent formatting. Preserve every fact - never invent information. " +
+                    "Return only the final content:\n\n" + content
         }
 }

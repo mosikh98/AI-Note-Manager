@@ -61,7 +61,7 @@ fun AiProvidersScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("AI Providers") },
+                title = { Text("سرویس‌های AI") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -76,7 +76,7 @@ fun AiProvidersScreen(
                     showForm = true
                 },
                 icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                text = { Text("Add Provider") }
+                text = { Text("افزودن سرویس") }
             )
         }
     ) { padding ->
@@ -91,7 +91,7 @@ fun AiProvidersScreen(
             if (providers.isEmpty()) {
                 item {
                     Text(
-                        "No providers yet. Add your own OpenAI-compatible API - a VPS gateway, OpenRouter, a local server - anything with /v1/chat/completions.",
+                        "هنوز سرویسی نداری. API سازگار با OpenAI خودت رو اضافه کن — دروازهٔ VPS، OpenRouter، سرور لوکال، هر چی /chat/completions داشته باشه.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         modifier = Modifier.padding(8.dp)
@@ -121,7 +121,7 @@ fun AiProvidersScreen(
                         Column(Modifier.weight(1f)) {
                             Text(provider.name, style = MaterialTheme.typography.titleMedium)
                             Text(
-                                "Model: " + provider.model,
+                                "مدل: " + provider.model,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                             )
@@ -134,11 +134,11 @@ fun AiProvidersScreen(
                         IconButton(onClick = {
                             editing = provider
                             showForm = true
-                        }) { Text("Edit") }
+                        }) { Text("ویرایش") }
                         IconButton(onClick = {
                             scope.launch { container.repository.deleteProvider(provider.id) }
                         }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                            Icon(Icons.Filled.Delete, contentDescription = "حذف")
                         }
                     }
                 }
@@ -174,16 +174,16 @@ private fun ProviderForm(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "Add Provider" else "Edit Provider") },
+        title = { Text(if (initial == null) "افزودن سرویس" else "ویرایش سرویس") },
         text = {
             Column(Modifier.fillMaxWidth()) {
-                FormField("Provider name", name) { name = it }
-                FormField("API URL (base)", baseUrl) { baseUrl = it; }
-                FormField("API Key", apiKey) { apiKey = it; }
-                FormField("Model", model) { model = it }
-                FormField("Organization ID (optional)", org) { org = it }
+                FormField("نام سرویس", name) { name = it }
+                FormField("آدرس API (پایه)", baseUrl) { baseUrl = it }
+                FormField("کلید API", apiKey) { apiKey = it }
+                FormField("مدل", model) { model = it }
+                FormField("شناسهٔ سازمان (اختیاری)", org) { org = it }
                 Text(
-                    "The key is encrypted with the Android Keystore and never written to source or logs.",
+                    "کلید با Keystore اندروید رمزنگاری میشه و هیچ‌وقت وارد کد یا لاگ نمیشه.",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                 )
@@ -205,10 +205,10 @@ private fun ProviderForm(
                         )
                     )
                 }
-            ) { Text("Save") }
+            ) { Text("ذخیره") }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text("انصراف") }
         }
     )
 }

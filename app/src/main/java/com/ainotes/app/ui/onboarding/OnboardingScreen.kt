@@ -50,13 +50,13 @@ fun OnboardingScreen(
 
         if (step == 0) {
             Text(
-                "Welcome to AI Notes",
+                "به یادداشت هوشمند خوش اومدی",
                 style = MaterialTheme.typography.displaySmall,
                 textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                "Your notes.\nYour files.\nYour AI.",
+                "یادداشت‌هات.\nفایل‌هات.\nهوش مصنوعی‌ات.",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f),
                 textAlign = TextAlign.Center
@@ -67,16 +67,16 @@ fun OnboardingScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp)
-            ) { Text("Get Started") }
+            ) { Text("شروع") }
         } else {
             Text(
-                "Configure AI",
+                "تنظیم AI",
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                "Add an AI provider now - your own API URL, key and model - or do it later. Notes work fully offline without AI.",
+                "همین الان سرویس AI خودت رو اضافه کن — آدرس، کلید و مدل دلخواهت — یا بعداً. یادداشت‌ها بدون AI هم کاملاً آفلاین کار میکنن.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center
@@ -87,13 +87,13 @@ fun OnboardingScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp)
-            ) { Text("Add AI Provider") }
+            ) { Text("افزودن سرویس AI") }
             TextButton(
                 onClick = {
                     scope.launch { container.settings.setOnboardingDone() }
                     onDone()
                 }
-            ) { Text("Skip") }
+            ) { Text("بعداً") }
         }
 
         Spacer(Modifier.weight(1f))

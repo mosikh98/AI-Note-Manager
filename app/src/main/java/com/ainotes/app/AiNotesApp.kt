@@ -9,7 +9,7 @@ import com.ainotes.app.security.SecureStore
 import com.ainotes.app.settings.SettingsRepository
 
 /** Manual DI container - small, explicit, no framework overhead. */
-class AppContainer(app: Application) {
+class AppContainer(val app: Application) {
     val database = AiNotesDatabase.get(app)
     val secureStore = SecureStore(app)
     val repository = NotesRepository(database, secureStore)
@@ -25,5 +25,23 @@ class AiNotesApp : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        installCrashLogger()
+    }
+
+    /**
+     * Writes the last uncaught exception to filesDir/crash.log so the crash
+     * trace can be read from inside the app on the next launch.
+     */
+    private fun installCrashLogger() {
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            runCatching {
+                java.io.File(filesDir, "crash.log").writeText(
+                    throwable.javaClass.name + ": " + throwable.message + "\n" +
+                        throwable.stackTraceToString() + "\nthread: " + thread.name
+                )
+            }
+            previous?.uncaughtException(thread, throwable)
+        }
     }
 }

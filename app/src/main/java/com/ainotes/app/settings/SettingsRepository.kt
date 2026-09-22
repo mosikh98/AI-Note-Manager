@@ -20,6 +20,7 @@ class SettingsRepository(private val context: Context) {
         val DEFAULT_EXPORT = stringPreferencesKey("default_export")
         val ONBOARDING = booleanPreferencesKey("onboarding_done")
         val PROMPT = stringPreferencesKey("ai_prompt")
+        val PERM_ASKED = booleanPreferencesKey("permission_asked")
     }
 
     val themeMode: Flow<ThemeMode> = context.dataStore.data.map { p ->
@@ -52,4 +53,10 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setCustomPrompt(text: String) =
         context.dataStore.edit { it[Keys.PROMPT] = text }
+
+    val permissionAsked: Flow<Boolean> =
+        context.dataStore.data.map { it[Keys.PERM_ASKED] ?: false }
+
+    suspend fun markPermissionAsked() =
+        context.dataStore.edit { it[Keys.PERM_ASKED] = true }
 }

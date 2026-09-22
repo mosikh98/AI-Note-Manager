@@ -38,14 +38,15 @@ data class AiProviderConfig(
 )
 
 enum class AiAction(val label: String) {
-    ORGANIZE("Organize"),
-    SUMMARIZE("Summarize"),
-    EXPAND("Expand"),
-    REWRITE("Rewrite"),
-    EXTRACT_TASKS("Extract Tasks"),
-    GENERATE_TITLE("Generate Title"),
-    TRANSLATE("Translate"),
-    ASK("Ask AI")
+    ORGANIZE("سازمان‌دهی"),
+    SUMMARIZE("خلاصه"),
+    EXPAND("گسترش"),
+    REWRITE("بازنویسی"),
+    EXTRACT_TASKS("استخراج وظایف"),
+    GENERATE_TITLE("تولید عنوان"),
+    TRANSLATE("ترجمه"),
+    ASK("پرسش از AI"),
+    MASTERPIECE("✨ مسترپیس")
 }
 
 enum class ExportFormat(val label: String, val mime: String, val extension: String) {
