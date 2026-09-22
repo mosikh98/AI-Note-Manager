@@ -2,6 +2,8 @@
 
 A fully native Android note-taking app with an optional, user-configurable AI layer.
 
+- **Bilingual (فارسی / English)** - language picker on first launch; Persian runs RTL, English runs LTR; switchable later in Settings.
+
 - **Kotlin + Jetpack Compose + Material 3**
 - Offline-first local database (**Room**)
 - Attachments (SAF / system file picker), tags, folders, favorites

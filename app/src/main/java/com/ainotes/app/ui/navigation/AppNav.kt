@@ -3,6 +3,8 @@ package com.ainotes.app.ui.navigation
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.runtime.Composable
@@ -12,6 +14,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.ainotes.app.AppContainer
+import com.ainotes.app.ui.i18n.AppLang
+import com.ainotes.app.ui.i18n.LocalLang
 import com.ainotes.app.ui.editor.EditorScreen
 import com.ainotes.app.ui.home.HomeScreen
 import com.ainotes.app.ui.onboarding.OnboardingScreen
@@ -30,10 +34,14 @@ object Routes {
 @Composable
 fun AppNav(container: AppContainer, onboardingDone: Boolean) {
     val nav = rememberNavController()
+    val lang by container.settings.appLanguage.collectAsState(initial = "fa")
     val start = if (onboardingDone) Routes.HOME else Routes.ONBOARDING
     val easing = tween<androidx.compose.ui.unit.IntOffset>(420)
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(
+        LocalLang provides AppLang(lang),
+        LocalLayoutDirection provides (if (lang == "en") LayoutDirection.Ltr else LayoutDirection.Rtl)
+    ) {
     NavHost(
         navController = nav,
         startDestination = start,

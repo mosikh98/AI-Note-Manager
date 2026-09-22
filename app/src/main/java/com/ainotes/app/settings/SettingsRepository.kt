@@ -21,6 +21,8 @@ class SettingsRepository(private val context: Context) {
         val ONBOARDING = booleanPreferencesKey("onboarding_done")
         val PROMPT = stringPreferencesKey("ai_prompt")
         val PERM_ASKED = booleanPreferencesKey("permission_asked")
+        val LANG = stringPreferencesKey("app_language")
+        val LANG_CHOSEN = booleanPreferencesKey("language_chosen")
     }
 
     val themeMode: Flow<ThemeMode> = context.dataStore.data.map { p ->
@@ -59,4 +61,16 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun markPermissionAsked() =
         context.dataStore.edit { it[Keys.PERM_ASKED] = true }
+
+    /** "fa" (default) or "en" */
+    val appLanguage: Flow<String> =
+        context.dataStore.data.map { it[Keys.LANG] ?: "fa" }
+
+    val languageChosen: Flow<Boolean> =
+        context.dataStore.data.map { it[Keys.LANG_CHOSEN] ?: false }
+
+    suspend fun setLanguage(lang: String) = context.dataStore.edit {
+        it[Keys.LANG] = lang
+        it[Keys.LANG_CHOSEN] = true
+    }
 }

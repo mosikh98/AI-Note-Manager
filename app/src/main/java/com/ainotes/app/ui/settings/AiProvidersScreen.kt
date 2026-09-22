@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.ainotes.app.AppContainer
 import com.ainotes.app.domain.model.AiProviderConfig
+import com.ainotes.app.ui.i18n.txt
 import java.util.UUID
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
@@ -61,7 +62,7 @@ fun AiProvidersScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("سرویس‌های AI") },
+                title = { Text(txt("سرویس‌های AI", "AI Providers")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -76,7 +77,7 @@ fun AiProvidersScreen(
                     showForm = true
                 },
                 icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                text = { Text("افزودن سرویس") }
+                text = { Text(txt("افزودن سرویس", "Add Provider")) }
             )
         }
     ) { padding ->
@@ -91,7 +92,8 @@ fun AiProvidersScreen(
             if (providers.isEmpty()) {
                 item {
                     Text(
-                        "هنوز سرویسی نداری. API سازگار با OpenAI خودت رو اضافه کن — دروازهٔ VPS، OpenRouter، سرور لوکال، هر چی /chat/completions داشته باشه.",
+                        txt("هنوز سرویسی نداری. API سازگار با OpenAI خودت رو اضافه کن — دروازهٔ VPS، OpenRouter، سرور لوکال، هر چی /chat/completions داشته باشه.",
+                            "No providers yet. Add your own OpenAI-compatible API - a VPS gateway, OpenRouter, a local server - anything with /chat/completions."),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         modifier = Modifier.padding(8.dp)
@@ -121,7 +123,7 @@ fun AiProvidersScreen(
                         Column(Modifier.weight(1f)) {
                             Text(provider.name, style = MaterialTheme.typography.titleMedium)
                             Text(
-                                "مدل: " + provider.model,
+                                txt("مدل: ", "Model: ") + provider.model,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                             )
@@ -134,11 +136,11 @@ fun AiProvidersScreen(
                         IconButton(onClick = {
                             editing = provider
                             showForm = true
-                        }) { Text("ویرایش") }
+                        }) { Text(txt("ویرایش", "Edit")) }
                         IconButton(onClick = {
                             scope.launch { container.repository.deleteProvider(provider.id) }
                         }) {
-                            Icon(Icons.Filled.Delete, contentDescription = "حذف")
+                            Icon(Icons.Filled.Delete, contentDescription = txt("حذف", "Delete"))
                         }
                     }
                 }
@@ -174,16 +176,16 @@ private fun ProviderForm(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "افزودن سرویس" else "ویرایش سرویس") },
+        title = { Text(if (initial == null) txt("افزودن سرویس", "Add Provider") else txt("ویرایش سرویس", "Edit Provider")) },
         text = {
             Column(Modifier.fillMaxWidth()) {
-                FormField("نام سرویس", name) { name = it }
-                FormField("آدرس API (پایه)", baseUrl) { baseUrl = it }
-                FormField("کلید API", apiKey) { apiKey = it }
-                FormField("مدل", model) { model = it }
-                FormField("شناسهٔ سازمان (اختیاری)", org) { org = it }
+                FormField(txt("نام سرویس", "Provider name"), name) { name = it }
+                FormField(txt("آدرس API (پایه)", "API URL (base)"), baseUrl) { baseUrl = it }
+                FormField(txt("کلید API", "API Key"), apiKey) { apiKey = it }
+                FormField(txt("مدل", "Model"), model) { model = it }
+                FormField(txt("شناسهٔ سازمان (اختیاری)", "Organization ID (optional)"), org) { org = it }
                 Text(
-                    "کلید با Keystore اندروید رمزنگاری میشه و هیچ‌وقت وارد کد یا لاگ نمیشه.",
+                    txt("کلید با Keystore اندروید رمزنگاری میشه و هیچ‌وقت وارد کد یا لاگ نمیشه.", "The key is encrypted with the Android Keystore and never written to source or logs."),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                 )
@@ -205,10 +207,10 @@ private fun ProviderForm(
                         )
                     )
                 }
-            ) { Text("ذخیره") }
+            ) { Text(txt("ذخیره", "Save")) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("انصراف") }
+            TextButton(onClick = onDismiss) { Text(txt("انصراف", "Cancel")) }
         }
     )
 }

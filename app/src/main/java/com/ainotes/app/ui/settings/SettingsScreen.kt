@@ -44,6 +44,8 @@ import com.ainotes.app.AppContainer
 import com.ainotes.app.domain.model.ExportFormat
 import com.ainotes.app.settings.ThemeMode
 import com.ainotes.app.ui.components.SectionLabel
+import com.ainotes.app.ui.i18n.txt
+import com.ainotes.app.ui.i18n.themeTxt
 import com.ainotes.app.ui.theme.hexToColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -68,6 +70,8 @@ fun SettingsScreen(
     var showPrompt by remember { mutableStateOf(false) }
     var promptDraft by remember { mutableStateOf(customPrompt) }
     var showCloud by remember { mutableStateOf(false) }
+    var showLang by remember { mutableStateOf(false) }
+    val lang by container.settings.appLanguage.collectAsState(initial = "fa")
     var showBackup by remember { mutableStateOf(false) }
     var backingUp by remember { mutableStateOf(false) }
     var cloudStatus by remember { mutableStateOf<String?>(null) }
@@ -81,7 +85,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("تنظیمات") },
+                title = { Text(txt("تنظیمات", "Settings")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -96,7 +100,7 @@ fun SettingsScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
-            SectionLabel("ظاهر")
+            SectionLabel(txt("ظاهر", "Appearance"))
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -107,15 +111,7 @@ fun SettingsScreen(
                     FilterChip(
                         selected = themeMode == mode,
                         onClick = { scope.launch { container.settings.setTheme(mode) } },
-                        label = {
-                            Text(
-                                when (mode) {
-                                    ThemeMode.SYSTEM -> "سیستم"
-                                    ThemeMode.LIGHT -> "روشن"
-                                    ThemeMode.DARK -> "تیره"
-                                }
-                            )
-                        },
+                        label = { Text(themeTxt(mode)) },
                         modifier = Modifier.padding(end = 8.dp)
                     )
                 }
@@ -146,12 +142,18 @@ fun SettingsScreen(
                 }
             }
 
-            SectionLabel("هوش مصنوعی")
-            SettingRow("سرویس‌های AI", "پیکربندی API دلخواه خودت") { onOpenProviders() }
-            SettingRow("دستورالعمل AI", "ویرایش پرامپت سازمان‌دهی") { showPrompt = true }
-            SettingRow("حریم خصوصی", "متن یادداشت فقط وقتی از اکشن‌های AI استفاده کنی به سرور خودت فرستاده میشه") { }
+            SectionLabel(txt("هوش مصنوعی", "AI"))
+            SettingRow(txt("سرویس‌های AI", "AI Providers"), txt("پیکربندی API دلخواه خودت", "Configure your own API endpoint")) { onOpenProviders() }
+            SettingRow(txt("دستورالعمل AI", "AI Instructions"), txt("ویرایش پرامپت سازمان‌دهی", "Customize the organization prompt")) { showPrompt = true }
+            SettingRow(
+                txt("حریم خصوصی", "Privacy"),
+                txt(
+                    "متن یادداشت فقط وقتی از اکشن‌های AI استفاده کنی به سرور خودت فرستاده میشه",
+                    "Note content is sent to your AI server only when you use AI actions"
+                )
+            ) { }
 
-            SectionLabel("خروجی")
+            SectionLabel(txt("خروجی", "Export"))
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -167,16 +169,28 @@ fun SettingsScreen(
                 }
             }
 
-            SectionLabel("ذخیرهٔ ابری")
-            SettingRow("سرور ذخیرهٔ ابری", "آدرس سرور و کلید API برای پشتیبان‌گیری") { showCloud = true }
+            SectionLabel(txt("ذخیرهٔ ابری", "Cloud storage"))
             SettingRow(
-                "پشتیبان‌گیری اکنون",
-                if (backingUp) "در حال آپلود..." else "همهٔ یادداشت‌ها رو به سرورت میفرسته — فقط با دستور خودت"
+                txt("سرور ذخیرهٔ ابری", "Custom storage server"),
+                txt("آدرس سرور و کلید API برای پشتیبان‌گیری", "Server URL and API key for backup")
+            ) { showCloud = true }
+            SettingRow(
+                txt("پشتیبان‌گیری اکنون", "Backup now"),
+                if (backingUp) txt("در حال آپلود...", "Uploading...")
+                else txt(
+                    "همهٔ یادداشت‌ها رو به سرورت میفرسته — فقط با دستور خودت",
+                    "Uploads all notes to your server - only on your command"
+                )
             ) { showBackup = true }
 
-            SectionLabel("درباره")
-            SettingRow("نسخهٔ اپ", "1.0.0") { }
-            SettingRow("کتابخانه‌های متن‌باز", "Compose, Room, OkHttp, WorkManager") { }
+            SettingRow(
+                txt("زبان", "Language"),
+                if (lang == "en") "English — left-to-right" else "فارسی — راست‌نویس"
+            ) { showLang = true }
+
+            SectionLabel(txt("درباره", "About"))
+            SettingRow(txt("نسخهٔ اپ", "App version"), "1.0.0") { }
+            SettingRow(txt("کتابخانه‌های متن‌باز", "Open-source licenses"), "Compose, Room, OkHttp, WorkManager") { }
 
             Spacer(Modifier.height(40.dp))
         }
@@ -185,7 +199,7 @@ fun SettingsScreen(
     if (showPrompt) {
         AlertDialog(
             onDismissRequest = { showPrompt = false },
-            title = { Text("دستورالعمل AI") },
+            title = { Text(txt("دستورالعمل AI", "AI Instructions")) },
             text = {
                 OutlinedTextField(
                     value = promptDraft,
@@ -200,14 +214,14 @@ fun SettingsScreen(
                 TextButton(onClick = {
                     scope.launch { container.settings.setCustomPrompt(promptDraft) }
                     showPrompt = false
-                }) { Text("ذخیره") }
+                }) { Text(txt("ذخیره", "Save")) }
             },
             dismissButton = {
                 Row {
                     TextButton(onClick = {
                         promptDraft = com.ainotes.app.ai.PromptManager.DEFAULT_SYSTEM_PROMPT
-                    }) { Text("بازنشانی") }
-                    TextButton(onClick = { showPrompt = false }) { Text("انصراف") }
+                    }) { Text(txt("بازنشانی", "Reset")) }
+                    TextButton(onClick = { showPrompt = false }) { Text(txt("انصراف", "Cancel")) }
                 }
             }
         )
@@ -216,12 +230,17 @@ fun SettingsScreen(
     if (showBackup) {
         AlertDialog(
             onDismissRequest = { showBackup = false },
-            title = { Text("آپلود به سرورت؟") },
+            title = { Text(txt("آپلود به سرورت؟", "Upload to your server?")) },
             text = {
                 Text(
-                    "یادداشت‌هات به این آدرس فرستاده میشه: " +
-                        (cloudUrl.ifBlank { "(هنوز آدرس سروری تنظیم نشده)" }) +
-                        ".\n\nآپلود فقط و فقط وقتی انجام میشه که خودت «شروع پشتیبان‌گیری» رو بزنی — هیچ‌چیز بی‌صدا فرستاده نمیشه."
+                    txt(
+                        "یادداشت‌هات به این آدرس فرستاده میشه: " +
+                            (cloudUrl.ifBlank { "(هنوز آدرس سروری تنظیم نشده)" }) +
+                            ".\n\nآپلود فقط وقتی انجام میشه که خودت «شروع پشتیبان‌گیری» رو بزنی — هیچ‌چیز بی‌صدا فرستاده نمیشه.",
+                        "Your notes will be sent to: " +
+                            (cloudUrl.ifBlank { "(no server URL set yet)" }) +
+                            ".\n\nUploading happens only when you tap Backup - nothing is sent silently."
+                    )
                 )
             },
             confirmButton = {
@@ -235,22 +254,22 @@ fun SettingsScreen(
                             val url = container.secureStore.get("cloud_url") ?: ""
                             val key = container.secureStore.get("cloud_key") ?: ""
                             cloudStatus = if (url.isBlank()) {
-                                "اول آدرس سرور رو تنظیم کن (تنظیمات ذخیرهٔ ابری)."
+                                txt("اول آدرس سرور رو تنظیم کن (تنظیمات ذخیرهٔ ابری).", "Set a server URL first (Cloud storage settings).")
                             } else {
                                 val notes = runCatching { container.repository.allNotes() }
                                     .getOrDefault(emptyList())
                                 val storage = CustomCloudStorage(CustomCloudConfig(url, key))
                                 val ok = runCatching { storage.backup(notes) }.getOrDefault(false)
-                                if (ok) "${notes.size} یادداشت با موفقیت آپلود شد."
-                                else "آپلود ناموفق بود — آدرس سرور و کلید API رو چک کن."
+                                if (ok) txt("${notes.size} یادداشت با موفقیت آپلود شد.", "${notes.size} notes uploaded successfully.")
+                                else txt("آپلود ناموفق بود — آدرس سرور و کلید API رو چک کن.", "Upload failed - check server URL and API key.")
                             }
                             backingUp = false
                         }
                     }
-                ) { Text("شروع پشتیبان‌گیری") }
+                ) { Text(txt("شروع پشتیبان‌گیری", "Start backup")) }
             },
             dismissButton = {
-                TextButton(onClick = { showBackup = false }) { Text("انصراف") }
+                TextButton(onClick = { showBackup = false }) { Text(txt("انصراف", "Cancel")) }
             }
         )
     }
@@ -258,10 +277,48 @@ fun SettingsScreen(
     cloudStatus?.let { status ->
         AlertDialog(
             onDismissRequest = { cloudStatus = null },
-            title = { Text("نتیجهٔ پشتیبان‌گیری") },
+            title = { Text(txt("نتیجهٔ پشتیبان‌گیری", "Backup result")) },
             text = { Text(status) },
             confirmButton = {
-                TextButton(onClick = { cloudStatus = null }) { Text("باشه") }
+                TextButton(onClick = { cloudStatus = null }) { Text(txt("باشه", "OK")) }
+            }
+        )
+    }
+
+    if (showLang) {
+        AlertDialog(
+            onDismissRequest = { showLang = false },
+            title = { Text(txt("زبان", "Language")) },
+            text = {
+                Column {
+                    Text(
+                        "فارسی — راست‌نویس",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (lang == "fa") MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                scope.launch { container.settings.setLanguage("fa") }
+                            }
+                            .padding(vertical = 12.dp)
+                    )
+                    Text(
+                        "English — left-to-right",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = if (lang == "en") MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                scope.launch { container.settings.setLanguage("en") }
+                            }
+                            .padding(vertical = 12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLang = false }) { Text(txt("بستن", "Close")) }
             }
         )
     }
@@ -269,14 +326,14 @@ fun SettingsScreen(
     if (showCloud) {
         AlertDialog(
             onDismissRequest = { showCloud = false },
-            title = { Text("ذخیره‌ساز ابری اختصاصی") },
+            title = { Text(txt("ذخیره‌ساز ابری اختصاصی", "Custom cloud storage")) },
             text = {
                 Column {
                     OutlinedTextField(
                         value = cloudUrl,
                         onValueChange = { cloudUrl = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("آدرس سرور، مثلاً https://example.com/api") },
+                        placeholder = { Text(txt("آدرس سرور، مثلاً https://example.com/api", "Server URL, e.g. https://example.com/api")) },
                         singleLine = true
                     )
                     Spacer(Modifier.height(8.dp))
@@ -284,12 +341,12 @@ fun SettingsScreen(
                         value = cloudKey,
                         onValueChange = { cloudKey = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("کلید API") },
+                        placeholder = { Text(txt("کلید API", "API key")) },
                         singleLine = true
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        "به‌صورت رمزنگاری‌شده روی همین دستگاه ذخیره میشه و هیچ‌وقت وارد کد نمیشه.",
+                        txt("به‌صورت رمزنگاری‌شده روی همین دستگاه ذخیره میشه و هیچ‌وقت وارد کد نمیشه.", "Stored encrypted on this device; never written into source code."),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                     )
@@ -302,7 +359,7 @@ fun SettingsScreen(
                         container.secureStore.put("cloud_key", cloudKey)
                     }
                     showCloud = false
-                }) { Text("ذخیره") }
+                }) { Text(txt("ذخیره", "Save")) }
             },
             dismissButton = {
                 TextButton(onClick = { showCloud = false }) { Text("Cancel") }

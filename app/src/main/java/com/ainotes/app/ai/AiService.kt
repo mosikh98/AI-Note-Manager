@@ -21,16 +21,16 @@ class AiService(
         content: String,
         extra: String? = null
     ): Flow<AiProgress> = flow {
-        emit(AiProgress.Stage("تحلیل محتوا"))
+        emit(AiProgress.Stage("analyzing"))
         val client = clientFactory(provider)
-        emit(AiProgress.Stage("ساخت بخش‌ها"))
+        emit(AiProgress.Stage("sections"))
         val answer = client.chat(
             listOf(
                 ChatMessage("system", PromptManager.DEFAULT_SYSTEM_PROMPT),
                 ChatMessage("user", PromptManager.userPrompt(action, content, extra))
             )
         )
-        emit(AiProgress.Stage("بهبود قالب‌بندی"))
+        emit(AiProgress.Stage("formatting"))
         emit(AiProgress.Result(answer.trim()))
     }
 }
