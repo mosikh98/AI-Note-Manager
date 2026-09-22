@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
@@ -150,6 +152,7 @@ fun AiProvidersScreen(
 
     if (showForm) {
         ProviderForm(
+            container = container,
             initial = editing,
             onSave = { config ->
                 scope.launch {
@@ -164,6 +167,7 @@ fun AiProvidersScreen(
 
 @Composable
 private fun ProviderForm(
+    container: AppContainer,
     initial: AiProviderConfig?,
     onSave: (AiProviderConfig) -> Unit,
     onDismiss: () -> Unit
@@ -173,6 +177,9 @@ private fun ProviderForm(
     var apiKey by remember { mutableStateOf(initial?.apiKey ?: "") }
     var model by remember { mutableStateOf(initial?.model ?: "") }
     var org by remember { mutableStateOf(initial?.organizationId ?: "") }
+    var testing by remember { mutableStateOf(false) }
+    var testMsg by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -189,6 +196,62 @@ private fun ProviderForm(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                 )
+
+                Spacer(Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(
+                        enabled = !testing && baseUrl.isNotBlank() && model.isNotBlank(),
+                        onClick = {
+                            testing = true
+                            testMsg = null
+                            scope.launch {
+                                testMsg = runCatching {
+                                    val keyNow = if (apiKey.isBlank() || apiKey.contains("\u2022")) {
+                                        initial?.id?.let { id ->
+                                            container.repository.realProvider(id)?.apiKey
+                                        } ?: ""
+                                    } else {
+                                        apiKey.trim()
+                                    }
+                                    val cfg = AiProviderConfig(
+                                        id = initial?.id ?: "test",
+                                        name = name.ifBlank { "test" },
+                                        baseUrl = baseUrl.trim(),
+                                        model = model.trim(),
+                                        apiKey = keyNow,
+                                        organizationId = org.trim().ifBlank { null },
+                                        isActive = false
+                                    )
+                                    val reply =
+                                        com.ainotes.app.ai.OpenAiCompatibleClient(cfg).chat(
+                                            listOf(
+                                                com.ainotes.app.ai.ChatMessage(
+                                                    "user",
+                                                    "Reply with the single word: pong"
+                                                )
+                                            )
+                                        )
+                                    "\u2705 " + reply.trim().take(60)
+                                }.getOrElse { e ->
+                                    "\u274C " + (e.message ?: e.javaClass.simpleName)
+                                }
+                                testing = false
+                            }
+                        }
+                    ) { Text(txt("تست اتصال", "Test connection")) }
+                    if (testing) {
+                        Spacer(Modifier.padding(8.dp))
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    }
+                }
+                testMsg?.let { m ->
+                    Text(
+                        m,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (m.startsWith("\u2705")) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error
+                    )
+                }
             }
         },
         confirmButton = {
@@ -237,6 +300,7 @@ fun ProviderFormDialog(
 ) {
     val scope = rememberCoroutineScope()
     ProviderForm(
+        container = container,
         initial = null,
         onSave = { config ->
             scope.launch {

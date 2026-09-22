@@ -229,18 +229,70 @@ class EditorViewModel(
 
     // ---- export ----
 
-    fun export(format: ExportFormat) {
+    /**
+     * Export flow: optimizes the note with AI for the chosen file type first
+     * (progress shown in the editor), then writes the file. Falls back to the
+     * raw content when no AI provider is configured or the AI call fails.
+     */
+    fun exportOptimized(format: ExportFormat) {
+        val s = _state.value
+        persist()
+        if (s.content.isBlank()) {
+            export(format)
+            return
+        }
+        aiJob?.cancel()
+        aiJob = viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    ai = AiUiState(
+                        running = true,
+                        action = AiAction.MASTERPIECE,
+                        original = s.content
+                    )
+                )
+            }
+            val provider = runCatching { container.repository.activeProvider() }.getOrNull()
+            if (provider == null) {
+                _state.update { it.copy(ai = AiUiState()) }
+                export(format)
+                return@launch
+            }
+            var optimized: String? = null
+            val ok = runCatching {
+                container.aiService
+                    .run(provider, AiAction.MASTERPIECE, s.content)
+                    .collect { progress ->
+                        when (progress) {
+                            is AiProgress.Stage ->
+                                _state.update { it.copy(ai = it.ai.copy(stage = progress.text)) }
+                            is AiProgress.Result -> optimized = progress.text
+                        }
+                    }
+            }.isSuccess
+            _state.update { it.copy(ai = AiUiState()) }
+            export(format, contentOverride = if (ok) optimized else null)
+        }
+    }
+
+    fun export(format: ExportFormat, contentOverride: String? = null) {
         val s = _state.value
         persist()
         runCatching {
             val note = Note(
-                id = s.id, title = s.title.ifBlank { "Untitled" }, content = s.content,
-                tags = s.tags, createdAt = 0, updatedAt = System.currentTimeMillis(),
+                id = s.id,
+                title = s.title.ifBlank { "Untitled" },
+                content = contentOverride ?: s.content,
+                tags = s.tags,
+                createdAt = 0,
+                updatedAt = System.currentTimeMillis(),
                 isFavorite = s.isFavorite
             )
             val out = container.exporter.export(note, format)
             _state.update {
-                it.copy(exported = ExportManagerExported(out.file.absolutePath, out.mime, out.file.name))
+                it.copy(
+                    exported = ExportManagerExported(out.file.absolutePath, out.mime, out.file.name)
+                )
             }
         }.onFailure { e ->
             _state.update { it.copy(ai = it.ai.copy(error = e.message)) }

@@ -421,16 +421,14 @@ fun EditorScreen(
             text = {
                 Column {
                     Text(
-                        txt("✨ مسترپیس — اول متن رو با AI به‌شدت بهینه‌سازی کن، بعد خروجی بگیر",
-                            "✨ Masterpiece — optimize the text with AI first, then export"),
+                        txt(
+                            "با انتخاب شما، هوش مصنوعی یادداشت شما را برای نوع فایل خروجی بهینه می‌کند.",
+                            "On selection, AI optimizes your note for the chosen export format."
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                showExport = false
-                                vm.runAi(com.ainotes.app.domain.model.AiAction.MASTERPIECE)
-                            }
                             .padding(vertical = 10.dp)
                     )
                     ExportFormat.entries.forEach { format ->
@@ -439,7 +437,7 @@ fun EditorScreen(
                                 .fillMaxWidth()
                                 .clickable {
                                     showExport = false
-                                    vm.export(format)
+                                    vm.exportOptimized(format)
                                 }
                                 .padding(vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically

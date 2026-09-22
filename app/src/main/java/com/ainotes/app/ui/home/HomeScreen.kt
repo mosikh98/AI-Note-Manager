@@ -86,12 +86,20 @@ fun HomeScreen(
     }
 
     var showPermDialog by remember { mutableStateOf(false) }
-    val permissionAskedPref by container.settings.permissionAsked.collectAsState(initial = true)
+    var permGranted by remember {
+        mutableStateOf(
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                container.app, mediaPermission()
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
     val permLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { }
-    LaunchedEffect(permissionAskedPref) {
-        if (!permissionAskedPref) showPermDialog = true
+    ) { granted -> permGranted = granted }
+
+    // Gate on the REAL permission state: keep offering on launch until granted.
+    LaunchedEffect(permGranted) {
+        if (!permGranted) showPermDialog = true
     }
 
     var newFolderName by remember { mutableStateOf("") }
@@ -276,8 +284,7 @@ fun HomeScreen(
         AlertDialog(
             onDismissRequest = {
                 showPermDialog = false
-                scope.launch { container.settings.markPermissionAsked() }
-            },
+                            },
             title = { Text(txt("دسترسی به حافظه", "Storage access")) },
             text = {
                 Text(
@@ -290,25 +297,20 @@ fun HomeScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showPermDialog = false
-                    scope.launch { container.settings.markPermissionAsked() }
-                    permLauncher.launch(mediaPermission())
+                                        permLauncher.launch(mediaPermission())
                 }) { Text(txt("اجازه بده", "Allow")) }
             },
             dismissButton = {
                 TextButton(onClick = {
                     showPermDialog = false
-                    scope.launch { container.settings.markPermissionAsked() }
-                }) { Text(txt("الان نه", "Not now")) }
+                                    }) { Text(txt("الان نه", "Not now")) }
             }
         )
     }
 
     crashLog?.let { trace ->
         AlertDialog(
-            onDismissRequest = {
-                runCatching { File(container.app.filesDir, "crash.log").delete() }
-                crashLog = null
-            },
+            onDismissRequest = { crashLog = null },
             title = { Text(txt("متاسفانه اپ بسته شد", "The app crashed")) },
             text = {
                 Text(
@@ -320,15 +322,11 @@ fun HomeScreen(
             confirmButton = {
                 TextButton(onClick = {
                     clipboard.setText(AnnotatedString(trace))
-                    runCatching { File(container.app.filesDir, "crash.log").delete() }
                     crashLog = null
                 }) { Text(txt("کپی خطا", "Copy error")) }
             },
             dismissButton = {
-                TextButton(onClick = {
-                    runCatching { File(container.app.filesDir, "crash.log").delete() }
-                    crashLog = null
-                }) { Text(txt("بستن", "Close")) }
+                TextButton(onClick = { crashLog = null }) { Text(txt("بستن", "Close")) }
             }
         )
     }

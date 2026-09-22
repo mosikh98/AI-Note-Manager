@@ -49,8 +49,14 @@ import com.ainotes.app.ui.i18n.themeTxt
 import com.ainotes.app.ui.theme.hexToColor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import com.ainotes.app.sync.CustomCloudConfig
-import com.ainotes.app.sync.CustomCloudStorage
+import com.ainotes.app.sync.CloudConfig
+import com.ainotes.app.sync.CloudKinds
+import com.ainotes.app.sync.CloudManager
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 
 private val ACCENTS = listOf("#7C4DFF", "#00A0A8", "#E91E63", "#FF6D00", "#2E7D32", "#3D5AFE")
 
@@ -75,11 +81,9 @@ fun SettingsScreen(
     var showBackup by remember { mutableStateOf(false) }
     var backingUp by remember { mutableStateOf(false) }
     var cloudStatus by remember { mutableStateOf<String?>(null) }
-    var cloudUrl by remember {
-        mutableStateOf(container.secureStore.get("cloud_url") ?: "")
-    }
-    var cloudKey by remember {
-        mutableStateOf(if (container.secureStore.get("cloud_key") == null) "" else "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022")
+    var showCrashLog by remember { mutableStateOf(false) }
+    var cloudKind by remember {
+        mutableStateOf(container.secureStore.get("cloud_kind") ?: CloudKinds.CUSTOM)
     }
 
     Scaffold(
@@ -171,15 +175,15 @@ fun SettingsScreen(
 
             SectionLabel(txt("ذخیرهٔ ابری", "Cloud storage"))
             SettingRow(
-                txt("سرور ذخیرهٔ ابری", "Custom storage server"),
-                txt("آدرس سرور و کلید API برای پشتیبان‌گیری", "Server URL and API key for backup")
+                txt("سرویس ابری", "Cloud service"),
+                kindLabel(cloudKind)
             ) { showCloud = true }
             SettingRow(
                 txt("پشتیبان‌گیری اکنون", "Backup now"),
                 if (backingUp) txt("در حال آپلود...", "Uploading...")
                 else txt(
-                    "همهٔ یادداشت‌ها رو به سرورت میفرسته — فقط با دستور خودت",
-                    "Uploads all notes to your server - only on your command"
+                    "همهٔ یادداشت‌ها رو به سرویس ابری میفرسته — فقط با دستور خودت",
+                    "Uploads all notes to your cloud service - only on your command"
                 )
             ) { showBackup = true }
 
@@ -191,6 +195,10 @@ fun SettingsScreen(
             SectionLabel(txt("درباره", "About"))
             SettingRow(txt("نسخهٔ اپ", "App version"), "1.0.0") { }
             SettingRow(txt("کتابخانه‌های متن‌باز", "Open-source licenses"), "Compose, Room, OkHttp, WorkManager") { }
+            SettingRow(
+                txt("لاگ کرش", "Crash log"),
+                txt("نمایش، کپی و پاک‌کردن آخرین خطای کرش", "View, copy and clear the last crash")
+            ) { showCrashLog = true }
 
             Spacer(Modifier.height(40.dp))
         }
@@ -228,19 +236,30 @@ fun SettingsScreen(
     }
 
     if (showBackup) {
+        val backupDest = kindLabel(cloudKind)
+        val msgNoService = txt(
+            "اول سرویس ابری رو تنظیم کن (بخش ذخیرهٔ ابری).",
+            "Set up a cloud service first (Cloud storage section)."
+        )
+        val msgIncomplete = txt(
+            "اطلاعات اتصال ناقصه — اول سرویس رو کامل پیکربندی کن.",
+            "Connection details are incomplete - finish the service setup first."
+        )
+        val msgOkTpl = txt(
+            "{n} یادداشت با موفقیت آپلود شد.",
+            "{n} notes uploaded successfully."
+        )
         AlertDialog(
             onDismissRequest = { showBackup = false },
-            title = { Text(txt("آپلود به سرورت؟", "Upload to your server?")) },
+            title = { Text(txt("آپلود به سرویس ابری؟", "Upload to cloud service?")) },
             text = {
                 Text(
-                    txt(
-                        "یادداشت‌هات به این آدرس فرستاده میشه: " +
-                            (cloudUrl.ifBlank { "(هنوز آدرس سروری تنظیم نشده)" }) +
-                            ".\n\nآپلود فقط وقتی انجام میشه که خودت «شروع پشتیبان‌گیری» رو بزنی — هیچ‌چیز بی‌صدا فرستاده نمیشه.",
-                        "Your notes will be sent to: " +
-                            (cloudUrl.ifBlank { "(no server URL set yet)" }) +
-                            ".\n\nUploading happens only when you tap Backup - nothing is sent silently."
-                    )
+                    txt("یادداشت‌هات به این مقصد فرستاده میشه: ", "Your notes will be sent to: ") +
+                        backupDest + ".\n\n" +
+                        txt(
+                            "آپلود فقط وقتی انجام میشه که خودت «شروع پشتیبان‌گیری» رو بزنی — هیچ‌چیز بی‌صدا فرستاده نمیشه.",
+                            "Uploading happens only when you tap Start backup - nothing is sent silently."
+                        )
                 )
             },
             confirmButton = {
@@ -250,18 +269,20 @@ fun SettingsScreen(
                         showBackup = false
                         backingUp = true
                         cloudStatus = null
+                        val cloud = CloudManager(container.secureStore)
+                        val cfg = cloud.load()
                         scope.launch(Dispatchers.IO) {
-                            val url = container.secureStore.get("cloud_url") ?: ""
-                            val key = container.secureStore.get("cloud_key") ?: ""
-                            cloudStatus = if (url.isBlank()) {
-                                txt("اول آدرس سرور رو تنظیم کن (تنظیمات ذخیرهٔ ابری).", "Set a server URL first (Cloud storage settings).")
+                            cloudStatus = if (!cloud.isConfigured(cfg)) {
+                                if (cfg.url.isBlank()) msgNoService else msgIncomplete
                             } else {
                                 val notes = runCatching { container.repository.allNotes() }
                                     .getOrDefault(emptyList())
-                                val storage = CustomCloudStorage(CustomCloudConfig(url, key))
-                                val ok = runCatching { storage.backup(notes) }.getOrDefault(false)
-                                if (ok) txt("${notes.size} یادداشت با موفقیت آپلود شد.", "${notes.size} notes uploaded successfully.")
-                                else txt("آپلود ناموفق بود — آدرس سرور و کلید API رو چک کن.", "Upload failed - check server URL and API key.")
+                                cloud.backup(notes).fold(
+                                    onSuccess = { msgOkTpl.replace("{n}", notes.size.toString()) },
+                                    onFailure = { e ->
+                                        "\u274C " + (e.message ?: e.javaClass.simpleName)
+                                    }
+                                )
                             }
                             backingUp = false
                         }
@@ -324,45 +345,200 @@ fun SettingsScreen(
     }
 
     if (showCloud) {
+        val cloud = remember { CloudManager(container.secureStore) }
+        val stored = remember { cloud.load() }
+        var cKind by remember { mutableStateOf(stored.kind) }
+        var cUrl by remember { mutableStateOf(stored.url) }
+        var cUser by remember { mutableStateOf(stored.username) }
+        var cPass by remember { mutableStateOf(maskOrEmpty(stored.password)) }
+        var cToken by remember { mutableStateOf(maskOrEmpty(stored.token)) }
+        var cKey by remember { mutableStateOf(maskOrEmpty(stored.apiKey)) }
+        var testing by remember { mutableStateOf(false) }
+        var testMsg by remember { mutableStateOf<String?>(null) }
+
         AlertDialog(
             onDismissRequest = { showCloud = false },
-            title = { Text(txt("ذخیره‌ساز ابری اختصاصی", "Custom cloud storage")) },
+            title = { Text(txt("ذخیرهٔ ابری", "Cloud storage")) },
             text = {
-                Column {
-                    OutlinedTextField(
-                        value = cloudUrl,
-                        onValueChange = { cloudUrl = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text(txt("آدرس سرور، مثلاً https://example.com/api", "Server URL, e.g. https://example.com/api")) },
-                        singleLine = true
-                    )
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    CloudKinds.ALL.forEach { k ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    cKind = k
+                                    testMsg = null
+                                }
+                                .padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = cKind == k,
+                                onClick = {
+                                    cKind = k
+                                    testMsg = null
+                                }
+                            )
+                            Text(kindLabel(k), style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    when (cKind) {
+                        CloudKinds.CUSTOM -> {
+                            CloudField(
+                                txt("آدرس سرور (endpoint)", "Server URL (endpoint)"),
+                                cUrl
+                            ) { cUrl = it }
+                            CloudField(
+                                txt("کلید API (اختیاری)", "API key (optional)"),
+                                cKey
+                            ) { cKey = it }
+                        }
+                        CloudKinds.WEBDAV -> {
+                            CloudField(
+                                txt("آدرس پوشهٔ WebDAV", "WebDAV folder URL"),
+                                cUrl,
+                                hint = txt(
+                                    "مثلاً Nextcloud: .../remote.php/dav/files/USER/",
+                                    "e.g. Nextcloud: .../remote.php/dav/files/USER/"
+                                )
+                            ) { cUrl = it }
+                            CloudField(txt("نام کاربری", "Username"), cUser) { cUser = it }
+                            CloudField(
+                                txt("رمز عبور", "Password"),
+                                cPass,
+                                password = true
+                            ) { cPass = it }
+                        }
+                        else -> {
+                            CloudField(
+                                txt("توکن دسترسی", "Access token"),
+                                cToken,
+                                password = true
+                            ) { cToken = it }
+                            Text(
+                                tokenHint(cKind),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
+                    }
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = cloudKey,
-                        onValueChange = { cloudKey = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text(txt("کلید API", "API key")) },
-                        singleLine = true
-                    )
-                    Spacer(Modifier.height(6.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(
+                            enabled = !testing && fieldsPresent(cKind, cUrl, cUser, cToken),
+                            onClick = {
+                                testing = true
+                                testMsg = null
+                                val cfg = CloudConfig(
+                                    kind = cKind,
+                                    url = cUrl.trim(),
+                                    apiKey = unmask(cKey, stored.apiKey),
+                                    username = cUser.trim(),
+                                    password = unmask(cPass, stored.password),
+                                    token = unmask(cToken, stored.token)
+                                )
+                                scope.launch(Dispatchers.IO) {
+                                    testMsg = cloud.test(cfg).fold(
+                                        onSuccess = { "\u2705 " + it },
+                                        onFailure = { e ->
+                                            "\u274C " + (e.message ?: e.javaClass.simpleName)
+                                        }
+                                    )
+                                    testing = false
+                                }
+                            }
+                        ) { Text(txt("تست اتصال", "Test connection")) }
+                        if (testing) {
+                            Spacer(Modifier.padding(8.dp))
+                            CircularProgressIndicator(
+                                Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+                    }
+                    testMsg?.let { m ->
+                        Text(
+                            m,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (m.startsWith("\u2705")) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                     Text(
-                        txt("به‌صورت رمزنگاری‌شده روی همین دستگاه ذخیره میشه و هیچ‌وقت وارد کد نمیشه.", "Stored encrypted on this device; never written into source code."),
+                        txt(
+                            "رمز/توکن فقط رمزنگاری‌شده روی همین دستگاه ذخیره میشه و هیچ‌وقت وارد کد نمیشه.",
+                            "Passwords/tokens are stored encrypted on this device and never written into code."
+                        ),
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    container.secureStore.put("cloud_url", cloudUrl)
-                    if (cloudKey.isNotBlank() && !cloudKey.contains("\u2022")) {
-                        container.secureStore.put("cloud_key", cloudKey)
+                TextButton(
+                    onClick = {
+                        container.secureStore.put("cloud_kind", cKind)
+                        container.secureStore.put("cloud_url", cUrl.trim())
+                        if (!isMasked(cKey)) container.secureStore.put("cloud_key", cKey.trim())
+                        container.secureStore.put("cloud_user", cUser.trim())
+                        if (!isMasked(cPass)) container.secureStore.put("cloud_pass", cPass.trim())
+                        if (!isMasked(cToken)) container.secureStore.put("cloud_token", cToken.trim())
+                        cloudKind = cKind
+                        showCloud = false
                     }
-                    showCloud = false
-                }) { Text(txt("ذخیره", "Save")) }
+                ) { Text(txt("ذخیره", "Save")) }
             },
             dismissButton = {
-                TextButton(onClick = { showCloud = false }) { Text("Cancel") }
+                TextButton(onClick = { showCloud = false }) { Text(txt("انصراف", "Cancel")) }
+            }
+        )
+    }
+
+    if (showCrashLog) {
+        val trace = remember {
+            runCatching {
+                java.io.File(container.app.filesDir, "crash.log")
+                    .takeIf { it.exists() }?.readText()
+            }.getOrNull()
+        }
+        val clipboard = LocalClipboardManager.current
+        AlertDialog(
+            onDismissRequest = { showCrashLog = false },
+            title = { Text(txt("لاگ کرش", "Crash log")) },
+            text = {
+                Text(
+                    trace
+                        ?: txt(
+                            "لاگی ثبت نشده — هنوز کرشی رخ نداده یا پاک شده.",
+                            "No crash recorded yet."
+                        ),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = trace != null,
+                    onClick = { trace?.let { t -> clipboard.setText(AnnotatedString(t)) } }
+                ) { Text(txt("کپی", "Copy")) }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(
+                        onClick = {
+                            runCatching {
+                                java.io.File(container.app.filesDir, "crash.log").delete()
+                            }
+                            showCrashLog = false
+                        }
+                    ) { Text(txt("پاک کردن", "Clear")) }
+                    TextButton(onClick = { showCrashLog = false }) {
+                        Text(txt("بستن", "Close"))
+                    }
+                }
             }
         )
     }
@@ -388,5 +564,69 @@ private fun SettingRow(title: String, subtitle: String, onClick: () -> Unit) {
                 )
             }
         }
+    }
+}\n\nprivate const val CLOUD_MASK = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
+
+private fun isMasked(v: String) = v.contains('\u2022')
+private fun maskOrEmpty(v: String) = if (v.isBlank()) "" else CLOUD_MASK
+private fun unmask(value: String, stored: String) = if (isMasked(value)) stored else value
+
+private fun fieldsPresent(kind: String, url: String, user: String, token: String) =
+    when (kind) {
+        CloudKinds.CUSTOM -> url.isNotBlank()
+        CloudKinds.WEBDAV -> url.isNotBlank() && user.isNotBlank()
+        else -> token.isNotBlank()
+    }
+
+@Composable
+private fun kindLabel(kind: String): String = when (kind) {
+    CloudKinds.WEBDAV -> "WebDAV (Nextcloud, Box, pCloud)"
+    CloudKinds.DROPBOX -> "Dropbox"
+    CloudKinds.GDRIVE -> "Google Drive"
+    CloudKinds.ONEDRIVE -> "OneDrive (Microsoft)"
+    else -> txt("سرور اختصاصی (HTTP)", "Custom server (HTTP)")
+}
+
+@Composable
+private fun tokenHint(kind: String): String = when (kind) {
+    CloudKinds.DROPBOX -> txt(
+        "Dropbox App Console \u2192 دکمه Generated access token.",
+        "Dropbox App Console \u2192 Generated access token button."
+    )
+    CloudKinds.GDRIVE -> txt(
+        "Google OAuth Playground \u2192 scope drive \u2192 توکن.",
+        "Google OAuth Playground \u2192 drive scope \u2192 token."
+    )
+    else -> txt(
+        "Microsoft Graph Explorer \u2192 توکن با scope Files.ReadWrite.",
+        "Microsoft Graph Explorer \u2192 token with Files.ReadWrite scope."
+    )
+}
+
+@Composable
+private fun CloudField(
+    label: String,
+    value: String,
+    password: Boolean = false,
+    hint: String? = null,
+    onChange: (String) -> Unit
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        label = { Text(label) },
+        singleLine = true,
+        visualTransformation = if (password) PasswordVisualTransformation()
+        else VisualTransformation.None
+    )
+    if (hint != null) {
+        Text(
+            hint,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+        )
     }
 }

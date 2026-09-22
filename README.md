@@ -10,8 +10,10 @@ A fully native Android note-taking app with an optional, user-configurable AI la
 - Rich-ish Markdown editor with a formatting toolbar
 - **Bring-your-own AI**: any OpenAI-compatible `/v1/chat/completions` endpoint
 - AI actions: Organize, Summarize, Expand, Rewrite, Extract Tasks, Generate Title, Translate, Ask AI
-- Export: TXT, Markdown, HTML, PDF, DOCX, JSON
-- Modular cloud storage + sync architecture (WorkManager), conflict-aware metadata
+- Export: TXT, Markdown, HTML, PDF, DOCX, JSON — the format you pick is AI-optimized first (visible progress; falls back to raw text when no provider is configured)
+- Backup destinations: custom HTTP server, WebDAV (Nextcloud/Box/pCloud), Dropbox, Google Drive, OneDrive — each with a **Test connection** button; uploads only run on an explicit tap
+- **Test connection** button for AI providers (live one-shot ping)
+- In-app **crash log** (Settings → About): crashes are written to `filesDir/crash.log` and shown on next launch with copy/clear
 - Encrypted API-key storage (Android Keystore / EncryptedSharedPreferences)
 - Light / dark theme + accent colors, onboarding, empty & loading states
 
@@ -81,10 +83,20 @@ Authorization: Bearer <key>
 
 ## 8. Cloud storage
 
-`Settings -> Cloud storage -> Custom storage server`: server URL + API key.
-The `CloudStorage` interface is provider-agnostic — implement it for Drive, Dropbox,
-WebDAV or S3 later. Sync state per note: `Synced / Pending upload / Uploading /
-Downloaded / Conflict / Error`; conflicts are never silently overwritten.
+`Settings -> Cloud storage` offers the destinations (pick one, then **Test connection**):
+
+| Destination | What you enter |
+|-------------|----------------|
+| Custom HTTP server | endpoint URL + optional API key (`POST {url}`) |
+| WebDAV (Nextcloud, Box, pCloud) | folder URL + username + password |
+| Dropbox | access token (App Console → *Generated access token*) |
+| Google Drive | OAuth access token (OAuth Playground → `drive` scope) |
+| OneDrive (Microsoft) | Graph token (Graph Explorer, `Files.ReadWrite`) |
+
+All credentials are user-supplied at runtime and stored encrypted on device —
+the repository contains no secrets. Uploads are always explicit (Backup now);
+nothing is sent silently. Sync state per note: `Synced / Pending upload /
+Uploading / Downloaded / Conflict / Error`; conflicts are never silently overwritten.
 
 ## 9. Release build
 
