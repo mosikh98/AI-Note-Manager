@@ -1,0 +1,3 @@
+-keep class com.ainotes.app.data.local.entity.** { *; }
+-dontwarn okhttp3.**
+-dontwarn okio.**
