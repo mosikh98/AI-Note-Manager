@@ -565,7 +565,9 @@ private fun SettingRow(title: String, subtitle: String, onClick: () -> Unit) {
             }
         }
     }
-}\n\nprivate const val CLOUD_MASK = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
+}
+
+private const val CLOUD_MASK = "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
 
 private fun isMasked(v: String) = v.contains('\u2022')
 private fun maskOrEmpty(v: String) = if (v.isBlank()) "" else CLOUD_MASK
