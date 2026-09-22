@@ -26,10 +26,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -85,6 +88,7 @@ fun EditorScreen(
     var showExport by remember { mutableStateOf(false) }
     var showTags by remember { mutableStateOf(false) }
     var showAsk by remember { mutableStateOf(false) }
+    var preview by remember { mutableStateOf(false) }
     var askText by remember { mutableStateOf("") }
 
     val picker = rememberLauncherForActivityResult(
@@ -111,6 +115,12 @@ fun EditorScreen(
                         Icon(
                             if (state.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                             contentDescription = "Favorite"
+                        )
+                    }
+                    IconButton(onClick = { preview = !preview }) {
+                        Icon(
+                            if (preview) Icons.Filled.Edit else Icons.Filled.Visibility,
+                            contentDescription = if (preview) "Edit" else "Preview"
                         )
                     }
                     IconButton(onClick = { vm.persist() }) {
@@ -145,7 +155,7 @@ fun EditorScreen(
 
             Spacer(Modifier.height(10.dp))
 
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (!preview) LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(
                     listOf(
                         "H2" to "## ", "B" to "**", "I" to "_", "u" to "--",
@@ -169,16 +179,32 @@ fun EditorScreen(
 
             Spacer(Modifier.height(10.dp))
 
-            OutlinedTextField(
-                value = state.content,
-                onValueChange = vm::onContent,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(320.dp),
-                placeholder = {
-                    Text("Write, paste messy text, or tap \u201COrganize with AI\u201D")
+            if (preview) {
+                if (state.content.isBlank()) {
+                    Text(
+                        "Nothing to preview yet.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                } else {
+                    com.ainotes.app.ui.markdown.MarkdownView(
+                        content = state.content,
+                        onToggleLine = vm::toggleLine,
+                        modifier = Modifier.padding(vertical = 6.dp)
+                    )
                 }
-            )
+            } else {
+                OutlinedTextField(
+                    value = state.content,
+                    onValueChange = vm::onContent,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(320.dp),
+                    placeholder = {
+                        Text("Write, paste messy text, or tap \u201COrganize with AI\u201D")
+                    }
+                )
+            }
 
             if (state.ai.running) {
                 Spacer(Modifier.height(14.dp))

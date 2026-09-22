@@ -25,6 +25,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Signed with the debug key so assembleRelease emits a real,
+            // installable app-release.apk (unsigned builds are named
+            // app-release-unsigned.apk). Replace with your own signingConfig
+            // for Play Store releases.
+            signingConfig = signingConfigs.getByName("debug")
         }
         debug { isMinifyEnabled = false }
     }

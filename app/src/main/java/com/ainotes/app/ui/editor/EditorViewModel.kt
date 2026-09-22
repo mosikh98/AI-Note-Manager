@@ -77,6 +77,22 @@ class EditorViewModel(
     fun onTitle(value: String) = _state.update { it.copy(title = value) }
     fun onContent(value: String) = _state.update { it.copy(content = value) }
 
+    fun toggleLine(index: Int) {
+        val lines = _state.value.content.lines()
+        if (index !in lines.indices) return
+        val line = lines[index]
+        val updated = when {
+            line.contains("[ ]") -> line.replace("[ ]", "[x]")
+            line.contains("[x]") || line.contains("[X]") -> line.replace("[x]", "[ ]").replace("[X]", "[ ]")
+            line.trimStart().startsWith("\u2610") -> line.replace("\u2610", "\u2611")
+            line.trimStart().startsWith("\u2611") -> line.replace("\u2611", "\u2610")
+            else -> line
+        }
+        val newContent = lines.toMutableList().also { it[index] = updated }.joinToString("\n")
+        _state.update { it.copy(content = newContent) }
+        persist()
+    }
+
     fun insertToken(token: String) = _state.update {
         it.copy(content = if (it.content.isEmpty()) token else it.content + "\n" + token)
     }

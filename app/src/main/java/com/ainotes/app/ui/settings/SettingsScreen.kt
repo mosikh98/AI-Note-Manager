@@ -45,7 +45,10 @@ import com.ainotes.app.domain.model.ExportFormat
 import com.ainotes.app.settings.ThemeMode
 import com.ainotes.app.ui.components.SectionLabel
 import com.ainotes.app.ui.theme.hexToColor
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.ainotes.app.sync.CustomCloudConfig
+import com.ainotes.app.sync.CustomCloudStorage
 
 private val ACCENTS = listOf("#7C4DFF", "#00A0A8", "#E91E63", "#FF6D00", "#2E7D32", "#3D5AFE")
 
@@ -65,6 +68,9 @@ fun SettingsScreen(
     var showPrompt by remember { mutableStateOf(false) }
     var promptDraft by remember { mutableStateOf(customPrompt) }
     var showCloud by remember { mutableStateOf(false) }
+    var showBackup by remember { mutableStateOf(false) }
+    var backingUp by remember { mutableStateOf(false) }
+    var cloudStatus by remember { mutableStateOf<String?>(null) }
     var cloudUrl by remember {
         mutableStateOf(container.secureStore.get("cloud_url") ?: "")
     }
@@ -154,7 +160,11 @@ fun SettingsScreen(
             }
 
             SectionLabel("Cloud storage")
-            SettingRow("Custom storage server", "Server URL and API key for sync / backup") { showCloud = true }
+            SettingRow("Custom storage server", "Server URL and API key for backup") { showCloud = true }
+            SettingRow(
+                "Backup now",
+                if (backingUp) "Uploading..." else "Upload all notes to your server - explicit action, never automatic"
+            ) { showBackup = true }
 
             SectionLabel("About")
             SettingRow("App version", "1.0.0") { }
@@ -191,6 +201,59 @@ fun SettingsScreen(
                     }) { Text("Reset") }
                     TextButton(onClick = { showPrompt = false }) { Text("Cancel") }
                 }
+            }
+        )
+    }
+
+    if (showBackup) {
+        AlertDialog(
+            onDismissRequest = { showBackup = false },
+            title = { Text("Upload to your server?") },
+            text = {
+                Text(
+                    "Your notes will be sent to: " +
+                        (cloudUrl.ifBlank { "(no server URL set yet)" }) +
+                        ".\n\nUploading only ever happens when you tap Backup - nothing is sent silently."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !backingUp,
+                    onClick = {
+                        showBackup = false
+                        backingUp = true
+                        cloudStatus = null
+                        scope.launch(Dispatchers.IO) {
+                            val url = container.secureStore.get("cloud_url") ?: ""
+                            val key = container.secureStore.get("cloud_key") ?: ""
+                            cloudStatus = if (url.isBlank()) {
+                                "Set a server URL first (Cloud storage settings)."
+                            } else {
+                                val notes = runCatching { container.repository.allNotes() }
+                                    .getOrDefault(emptyList())
+                                val storage = CustomCloudStorage(CustomCloudConfig(url, key))
+                                val ok = runCatching { storage.backup(notes) }.getOrDefault(false)
+                                if (ok) "Uploaded ${notes.size} notes successfully."
+                                else "Upload failed - check your server URL and API key."
+                            }
+                            backingUp = false
+                        }
+                    }
+                ) { Text("Backup now") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBackup = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    cloudStatus?.let { status ->
+        AlertDialog(
+            onDismissRequest = { cloudStatus = null },
+            title = { Text("Backup result") },
+            text = { Text(status) },
+            confirmButton = {
+                TextButton(onClick = { cloudStatus = null }) { Text("OK") }
             }
         )
     }

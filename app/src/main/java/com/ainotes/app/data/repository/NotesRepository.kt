@@ -39,6 +39,8 @@ class NotesRepository(
     fun observeFavorites(): Flow<List<Note>> =
         notes.observeFavorites().map { list -> list.map { it.toDomain() } }
 
+    suspend fun allNotes(): List<Note> = notes.all().map { it.toDomain() }
+
     suspend fun note(id: String): Note? = notes.byId(id)?.toDomain()
 
     suspend fun createNote(

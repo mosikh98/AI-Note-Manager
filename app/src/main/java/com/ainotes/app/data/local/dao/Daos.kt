@@ -31,6 +31,9 @@ interface NoteDao {
     )
     fun search(q: String): Flow<List<NoteEntity>>
 
+    @Query("SELECT * FROM notes WHERE isDeleted = 0 ORDER BY updatedAt DESC")
+    suspend fun all(): List<NoteEntity>
+
     @Query("SELECT * FROM notes WHERE id = :id")
     suspend fun byId(id: String): NoteEntity?
 
