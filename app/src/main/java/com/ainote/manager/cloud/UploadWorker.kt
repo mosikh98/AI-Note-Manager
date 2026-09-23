@@ -5,6 +5,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.ainote.manager.data.NoteRepository
+import kotlinx.coroutines.flow.first
 
 /**
  * Runs a single note's upload in the background via WorkManager, so a backup survives
@@ -24,7 +25,7 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         val apiKey = repo.getCloudApiKey(cloudConfig.id)
             ?: return Result.failure(workDataOf(KEY_ERROR to "No API key saved for this cloud config"))
 
-        val snapshot = kotlinx.coroutines.flow.first(repo.observeAttachments(noteId))
+        val snapshot = repo.observeAttachments(noteId).first()
 
         val result = CloudUploader().uploadNote(cloudConfig.serverUrl, apiKey, note, snapshot)
         return when (result) {

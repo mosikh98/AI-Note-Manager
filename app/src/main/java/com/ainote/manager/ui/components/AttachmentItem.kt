@@ -1,5 +1,6 @@
 package com.ainote.manager.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -52,4 +53,4 @@ fun AttachmentItem(
 }
 
 private fun Modifier.clickableRow(onClick: () -> Unit): Modifier =
-    this.then(androidx.compose.foundation.clickable(onClick = onClick))
+    this.then(Modifier.clickable(onClick = onClick))

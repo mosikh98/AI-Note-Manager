@@ -19,6 +19,7 @@ import com.ainote.manager.data.NoteRepository
 import com.ainote.manager.export.ExportFormat
 import com.ainote.manager.export.NoteExporter
 import com.ainote.manager.util.FileUtils
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.json.JSONObject
