@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.AiNoteManager" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#121218</item>
+        <item name="android:windowBackground">#121218</item>
+    </style>
+</resources>

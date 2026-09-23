@@ -1,14 +1,14 @@
-name: Build APK
+name: Build Release APK
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-  workflow_dispatch:
+    branches: [ "main", "master" ]
+  workflow_dispatch: {}
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,32 +17,42 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: "8.7"
+          gradle-version: 8.7
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      # This repo's ./gradlew wrapper script is included, but the binary
+      # gradle-wrapper.jar is intentionally NOT committed (see README).
+      # Regenerate it here using the Gradle installed by setup-gradle above,
+      # so ./gradlew works for the rest of this workflow exactly as it would
+      # on a contributor's machine after they run this once locally.
+      - name: Generate Gradle wrapper jar
+        run: gradle wrapper --gradle-version 8.7
+      - run: chmod +x ./gradlew
 
-      - name: Build Release APK
+      - name: Create debug keystore for release signing
+        run: |
+          keytool -genkeypair -v \
+            -keystore app/debug.keystore \
+            -storepass android -keypass android \
+            -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=AI Note Manager, OU=Dev, O=Dev, L=Dev, S=Dev, C=US"
+        # Note: for a real production release, replace this step with restoring a
+        # real signing keystore from GitHub Secrets instead (see README).
+
+      - name: Build release APK
         run: ./gradlew assembleRelease --stacktrace
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
-
-      - name: Upload Release APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
+          name: app-release.apk
           path: app/build/outputs/apk/release/app-release.apk
-          if-no-files-found: error
-
-      - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
