@@ -21,6 +21,12 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # The legacy "tools" package (this action's default) was removed from
+          # Google's SDK repository, which made this step fail with
+          # "Warning: Failed to find package 'tools'". Request only the packages
+          # that still exist and that this project actually needs.
+          packages: "platform-tools platforms;android-34 build-tools;34.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
