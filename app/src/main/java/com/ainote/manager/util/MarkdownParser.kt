@@ -49,7 +49,7 @@ object MarkdownParser {
         return blocks
     }
 
-    /** Strips inline **bold**/*italic* markers for exporters that need plain text (TXT). */
+    /** Strips inline bold/italic markup for exporters that need plain text (TXT). */
     fun stripInlineMarkup(text: String): String =
         text.replace(Regex("\\*\\*(.*?)\\*\\*"), "$1")
             .replace(Regex("\\*(.*?)\\*"), "$1")
