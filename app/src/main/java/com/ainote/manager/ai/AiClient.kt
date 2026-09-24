@@ -83,6 +83,52 @@ class AiClient {
             }
         }
 
+    /**
+     * Lightweight reachability check for the Settings "Test connection" button — sends a
+     * minimal chat-completions request and just checks the endpoint responds successfully
+     * with the expected shape, without requiring the strict organize-JSON contract.
+     */
+    suspend fun testConnection(config: AiRequestConfig): AiResult = withContext(Dispatchers.IO) {
+        try {
+            val endpoint = buildEndpoint(config.baseUrl)
+            val bodyJson = buildJsonObject {
+                put("model", config.model)
+                putJsonArray("messages") {
+                    addJsonObject {
+                        put("role", "user")
+                        put("content", "Reply with just the word OK.")
+                    }
+                }
+                put("max_tokens", 5)
+            }
+
+            val requestBuilder = Request.Builder()
+                .url(endpoint)
+                .addHeader("Authorization", "Bearer ${config.apiKey}")
+                .addHeader("Content-Type", "application/json")
+
+            config.organizationId?.takeIf { it.isNotBlank() }?.let {
+                requestBuilder.addHeader("OpenAI-Organization", it)
+            }
+            config.customHeaders.forEach { (k, v) -> requestBuilder.addHeader(k, v) }
+            requestBuilder.post(bodyJson.toString().toRequestBody(jsonMediaType))
+
+            client.newCall(requestBuilder.build()).execute().use { response ->
+                val bodyStr = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    return@withContext AiResult.Error("HTTP ${response.code}: ${bodyStr.take(300)}")
+                }
+                val hasChoices = try {
+                    Json.parseToJsonElement(bodyStr).jsonObject["choices"]?.jsonArray?.isNotEmpty() == true
+                } catch (e: Exception) { false }
+                if (hasChoices) AiResult.Success(AiOrganizeResult(title = "OK", organizedContent = "OK"))
+                else AiResult.Error("Endpoint responded, but not in the expected chat-completions format.")
+            }
+        } catch (e: Exception) {
+            AiResult.Error(e.message ?: "Unknown network error")
+        }
+    }
+
     private fun buildEndpoint(baseUrl: String): String {
         val trimmed = baseUrl.trimEnd('/')
         return if (trimmed.endsWith("/chat/completions")) trimmed

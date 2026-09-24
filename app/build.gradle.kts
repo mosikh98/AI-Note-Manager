@@ -105,6 +105,9 @@ dependencies {
     // Coil (image loading for attachment thumbnails)
     implementation("io.coil-kt:coil-compose:2.6.0")
 
+    // Google Sign-In + Drive v3 REST upload (see GoogleDriveService)
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
+
     // Accompanist permissions (file/media picker doesn't strictly need it, kept minimal)
 
     testImplementation("junit:junit:4.13.2")

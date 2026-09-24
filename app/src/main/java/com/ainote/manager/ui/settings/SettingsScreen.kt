@@ -16,10 +16,9 @@ import com.ainote.manager.data.ProviderConfigEntity
 import com.ainote.manager.ui.components.ConfirmDialog
 import com.ainote.manager.ui.components.EmptyState
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** AI-provider content, hosted as one tab of the unified Settings screen. */
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit,
     viewModel: SettingsViewModel = viewModel(),
 ) {
     val configs by viewModel.configs.collectAsState()
@@ -27,33 +26,20 @@ fun SettingsScreen(
     var showEditor by remember { mutableStateOf(false) }
     var deleteTarget by remember { mutableStateOf<ProviderConfigEntity?>(null) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("AI Provider Settings") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Back") } }
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { editorTarget = null; showEditor = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "Add provider")
-            }
-        }
-    ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize()) {
-            Text(
-                "Configure any OpenAI-compatible /v1/chat/completions endpoint — OpenAI, OpenRouter, " +
-                    "a self-hosted model, or a custom gateway. AI Organize is fully optional: notes work offline without it.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(16.dp)
-            )
+    Column(Modifier.fillMaxSize()) {
+        Text(
+            "Configure any OpenAI-compatible /v1/chat/completions endpoint — OpenAI, OpenRouter, " +
+                "a self-hosted model, or a custom gateway. AI Organize is fully optional: notes work offline without it.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(16.dp)
+        )
+        Box(Modifier.weight(1f)) {
             if (configs.isEmpty()) {
                 EmptyState(
                     icon = Icons.Outlined.SmartToy,
                     title = "No AI provider configured",
                     subtitle = "Tap + to add one. You can save several and switch anytime.",
-                    modifier = Modifier.weight(1f)
                 )
             } else {
                 LazyColumn(
@@ -93,6 +79,13 @@ fun SettingsScreen(
                 }
             }
         }
+        Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.CenterEnd) {
+            FilledTonalButton(onClick = { editorTarget = null; showEditor = true }) {
+                Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Add AI provider")
+            }
+        }
     }
 
     if (showEditor) {
@@ -110,7 +103,7 @@ fun SettingsScreen(
     deleteTarget?.let { config ->
         ConfirmDialog(
             title = "Delete provider?",
-            message = "“${config.name}” and its saved API key will be removed.",
+            message = "\u201c${config.name}\u201d and its saved API key will be removed.",
             confirmLabel = "Delete",
             destructive = true,
             onConfirm = { viewModel.delete(config); deleteTarget = null },

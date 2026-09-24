@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [NoteEntity::class, AttachmentEntity::class, ProviderConfigEntity::class, CloudConfigEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -25,7 +25,11 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "ai_note_manager.db"
-                ).build().also { INSTANCE = it }
+                )
+                    // No released users to migrate yet — safe to recreate the DB on
+                    // schema bumps instead of hand-writing Migration objects.
+                    .fallbackToDestructiveMigration()
+                    .build().also { INSTANCE = it }
             }
     }
 }

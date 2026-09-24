@@ -15,3 +15,10 @@
 -dontwarn org.bouncycastle.**
 -dontwarn org.conscrypt.**
 -dontwarn org.openjsse.**
+
+# Google Play Services Auth (Google Sign-In / Drive access) ships its own consumer
+# proguard rules, but keep the request/response model classes just in case R8 strips
+# something it shouldn't across the reflection-based bits of the auth flow.
+-keep class com.google.android.gms.auth.api.signin.** { *; }
+-keep class com.google.android.gms.common.api.** { *; }
+-dontwarn com.google.android.gms.**

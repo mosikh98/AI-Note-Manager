@@ -23,7 +23,6 @@ import com.ainote.manager.ui.components.NoteCard
 fun NotesListScreen(
     onOpenNote: (Long) -> Unit,
     onOpenSettings: () -> Unit,
-    onOpenCloudSettings: () -> Unit,
     viewModel: NotesListViewModel = viewModel(),
 ) {
     val notes by viewModel.notes.collectAsState()
@@ -53,9 +52,6 @@ fun NotesListScreen(
                         if (!searchExpanded) viewModel.onQueryChange("")
                     }) {
                         Icon(if (searchExpanded) Icons.Filled.Close else Icons.Filled.Search, contentDescription = "Search")
-                    }
-                    IconButton(onClick = onOpenCloudSettings) {
-                        Icon(Icons.Filled.CloudUpload, contentDescription = "Cloud backup")
                     }
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Filled.Settings, contentDescription = "Settings")
