@@ -73,7 +73,7 @@ fun SettingsHostScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun AppearanceSettingsScreen(
     settings: AppearanceSettings,

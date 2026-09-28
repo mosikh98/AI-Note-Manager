@@ -14,6 +14,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -90,7 +91,9 @@ fun AiNoteManagerTheme(
     }
 
     val density = LocalDensity.current
-    CompositionLocalProvider(LocalDensity provides density.copy(fontScale = density.fontScale * fontScale.coerceIn(0.85f, 1.3f))) {
+    CompositionLocalProvider(
+        LocalDensity provides Density(density.density, density.fontScale * fontScale.coerceIn(0.85f, 1.3f))
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = AppTypography,
