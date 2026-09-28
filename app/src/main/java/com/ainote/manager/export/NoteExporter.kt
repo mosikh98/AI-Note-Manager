@@ -2,6 +2,7 @@ package com.ainote.manager.export
 
 import android.content.Context
 import android.content.Intent
+import com.ainote.manager.data.AttachmentEntity
 import com.ainote.manager.data.NoteEntity
 import com.ainote.manager.util.FileUtils
 import java.io.File
@@ -9,7 +10,12 @@ import java.io.File
 object NoteExporter {
 
     /** Renders [note] into [format] under the app's cache/exports dir and returns the file. */
-    fun exportToFile(context: Context, note: NoteEntity, format: ExportFormat): File {
+    fun exportToFile(
+        context: Context,
+        note: NoteEntity,
+        format: ExportFormat,
+        attachments: List<AttachmentEntity> = emptyList(),
+    ): File {
         val exportsDir = File(context.cacheDir, "exports").apply { mkdirs() }
         val safeTitle = note.title.ifBlank { "note" }
             .replace(Regex("[^A-Za-z0-9 _-]"), "").take(60).ifBlank { "note" }
@@ -19,7 +25,7 @@ object NoteExporter {
             ExportFormat.TXT -> TxtExporter.export(note, outFile)
             ExportFormat.MARKDOWN -> MarkdownExporter.export(note, outFile)
             ExportFormat.HTML -> HtmlExporter.export(note, outFile)
-            ExportFormat.PDF -> PdfExporter.export(note, outFile)
+            ExportFormat.PDF -> PdfExporter.export(note, outFile, attachments)
             ExportFormat.DOCX -> DocxExporter.export(note, outFile)
             ExportFormat.JSON -> JsonExporter.export(note, outFile)
         }
@@ -27,8 +33,13 @@ object NoteExporter {
     }
 
     /** Exports then launches Android's share sheet for the resulting file. */
-    fun exportAndShare(context: Context, note: NoteEntity, format: ExportFormat) {
-        val file = exportToFile(context, note, format)
+    fun exportAndShare(
+        context: Context,
+        note: NoteEntity,
+        format: ExportFormat,
+        attachments: List<AttachmentEntity> = emptyList(),
+    ) {
+        val file = exportToFile(context, note, format, attachments)
         val uri = FileUtils.uriForFile(context, file)
         val intent = Intent(Intent.ACTION_SEND).apply {
             type = format.mimeType

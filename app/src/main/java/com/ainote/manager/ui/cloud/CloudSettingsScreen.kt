@@ -174,7 +174,7 @@ private fun CloudConfigEditorDialog(
                 when (provider) {
                     CloudProviderType.GOOGLE_DRIVE -> {
                         Text(
-                            "Signs in with your Google account and backs up into a \u201cAI Note Manager Backups\u201d folder in your Drive. Requires one-time setup — see README \u201cConnecting Google Drive\u201d.",
+                            "Signs in with your Google account and backs up into a \u201cAI Note Manager Backups\u201d folder in your Drive.",
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(Modifier.height(4.dp))

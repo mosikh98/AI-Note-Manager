@@ -1,7 +1,12 @@
 package com.ainote.manager.export
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
+import android.media.MediaMetadataRetriever
+import com.ainote.manager.data.AttachmentEntity
 import com.ainote.manager.data.NoteEntity
 import com.ainote.manager.util.MarkdownParser
 import com.ainote.manager.util.MdBlock
@@ -15,7 +20,7 @@ object PdfExporter {
     private const val PAGE_HEIGHT = 842
     private const val MARGIN = 48f
 
-    fun export(note: NoteEntity, outFile: File) {
+    fun export(note: NoteEntity, outFile: File, attachments: List<AttachmentEntity> = emptyList()) {
         val document = PdfDocument()
         val titlePaint = Paint().apply { textSize = 22f; isFakeBoldText = true }
         val headingPaint = Paint().apply { textSize = 16f; isFakeBoldText = true }
@@ -75,9 +80,56 @@ object PdfExporter {
             }
         }
 
+        attachments.filter { it.mimeType.startsWith("image/") || it.mimeType.startsWith("video/") }.forEach { attachment ->
+            val file = File(attachment.localPath)
+            if (!file.isFile) return@forEach
+            val bitmap = if (attachment.mimeType.startsWith("video/")) videoFrame(file) else decodeImage(file)
+                ?: return@forEach
+
+            drawWrapped("${if (attachment.mimeType.startsWith("video/")) "Video" else "Image"}: ${attachment.fileName}", bodyPaint, 0f, 16f)
+            val maxWidth = PAGE_WIDTH - MARGIN * 2
+            val scale = minOf(maxWidth / bitmap.width, 320f / bitmap.height)
+            val imageWidth = bitmap.width * scale
+            val imageHeight = bitmap.height * scale
+            newPageIfNeeded(imageHeight + 12f)
+            canvas.drawBitmap(
+                bitmap,
+                null,
+                RectF(MARGIN, y, MARGIN + imageWidth, y + imageHeight),
+                Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG),
+            )
+            y += imageHeight + 12f
+            bitmap.recycle()
+        }
+
         document.finishPage(page)
         FileOutputStream(outFile).use { document.writeTo(it) }
         document.close()
+    }
+
+    private fun decodeImage(file: File): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.absolutePath, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+
+        val maxWidth = PAGE_WIDTH - MARGIN.toInt() * 2
+        var sampleSize = 1
+        while (bounds.outWidth / sampleSize > maxWidth * 2 || bounds.outHeight / sampleSize > 640) {
+            sampleSize *= 2
+        }
+        return BitmapFactory.decodeFile(file.absolutePath, BitmapFactory.Options().apply { inSampleSize = sampleSize })
+    }
+
+    private fun videoFrame(file: File): Bitmap? {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(file.absolutePath)
+            retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+        } catch (_: Exception) {
+            null
+        } finally {
+            retriever.release()
+        }
     }
 
     private fun plain(text: String) = MarkdownParser.stripInlineMarkup(text)

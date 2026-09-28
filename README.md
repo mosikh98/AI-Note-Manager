@@ -12,9 +12,10 @@ complete, offline-capable note-taking app on its own.
   bullet/numbered lists, checkable checklists) — never raw Markdown symbols on screen.
 - **AI Organize** — sends note text to your configured AI endpoint, shows an Original vs.
   AI Result preview, and lets you Apply or Cancel before anything changes.
-- **Attachments** — attach images or any file type via the system picker; shows name, type
-  icon, size; open or remove.
+- **Attachments** — attach photos, videos, or any file type via the system picker; shows
+   photos and playable videos in the note preview.
 - **Export** — TXT, Markdown, HTML, PDF, DOCX, JSON, shared via the Android share sheet.
+   PDFs include attached photos and video preview frames.
 - **Fully configurable AI provider** — works with any OpenAI-compatible
   `/v1/chat/completions` endpoint: OpenAI, OpenRouter, a self-hosted/local model, or a
   custom gateway. Save multiple provider configs and switch the active one. API keys are
@@ -133,8 +134,7 @@ the app.
 Settings ⚙️ → **Cloud Backup** tab → **Add cloud destination**, then pick a provider:
 
 - **Google Drive** — tap **Connect Google account**, sign in, and grant access. The app
-  creates an "AI Note Manager Backups" folder in your Drive and uploads there. **One-time
-  setup required** — see "Connecting Google Drive" below.
+   creates an "AI Note Manager Backups" folder in your Drive and uploads there.
 - **Dropbox** — paste an access token you generate yourself. See "Connecting Dropbox" below.
 - **Custom server** — enter a **Server URL** and **API Key**. The app POSTs a
   `multipart/form-data` request (a `metadata` JSON part with title/content, plus one part per
@@ -142,24 +142,6 @@ Settings ⚙️ → **Cloud Backup** tab → **Add cloud destination**, then pic
   accepts that shape.
 
 Tap **Use** to make a saved destination active, then tap the cloud icon on a note to back it up.
-
-### Connecting Google Drive
-
-Google requires every app that uses Sign-In to register its own OAuth client — there's no
-way around a one-time setup in Google Cloud Console:
-
-1. Go to [console.cloud.google.com](https://console.cloud.google.com), create (or pick) a
-   project, then **APIs & Services → Library** and enable the **Google Drive API**.
-2. **APIs & Services → OAuth consent screen** — set it up (External is fine; you can leave it
-   in "Testing" mode and just add your own Google account as a test user).
-3. **APIs & Services → Credentials → Create Credentials → OAuth client ID → Android**.
-   - Package name: `com.ainote.manager`
-   - SHA-1 certificate fingerprint: for the debug/CI-signed build this repo produces, run
-     `keytool -list -v -keystore app/debug.keystore -storepass android -alias androiddebugkey`
-     (or get it from your own release keystore if you switch to one) and paste the SHA-1 shown.
-4. Save. No further code changes or secrets are needed in the app — Google matches sign-in
-   requests to this registration by package name + signing certificate automatically.
-5. In the app, connect your account as described above.
 
 ### Connecting Dropbox
 

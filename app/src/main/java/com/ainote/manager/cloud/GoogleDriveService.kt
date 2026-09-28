@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit
  *
  * Requires the app's package name (com.ainote.manager) and signing certificate SHA-1 to be
  * registered as an OAuth Android client in Google Cloud Console (APIs & Services →
- * Credentials) with the Drive API enabled — see README "Connecting Google Drive".
+ * Credentials) with the Drive API enabled.
  * Uses the drive.file scope, so the app can only see/manage files it creates itself.
  */
 object GoogleDriveService {

@@ -1,10 +1,17 @@
 package com.ainote.manager.ui.noteedit
 
+import android.net.Uri
+import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
+import android.widget.MediaController
+import android.widget.VideoView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -12,14 +19,25 @@ import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.ainote.manager.export.ExportFormat
 import com.ainote.manager.ui.components.AttachmentItem
 import com.ainote.manager.ui.components.ConfirmDialog
 import com.ainote.manager.ui.components.MarkdownContent
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +59,7 @@ fun NoteEditScreen(
     var exportMenuExpanded by remember { mutableStateOf(false) }
     var attachMenuExpanded by remember { mutableStateOf(false) }
     var removeAttachmentTarget by remember { mutableStateOf<com.ainote.manager.data.AttachmentEntity?>(null) }
+    val clipboardManager = LocalClipboardManager.current
 
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.addAttachment(it) }
@@ -57,6 +76,11 @@ fun NoteEditScreen(
                     IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, contentDescription = "Back") }
                 },
                 actions = {
+                    if (!isEditingContent) {
+                        IconButton(onClick = { clipboardManager.setText(AnnotatedString(content)) }) {
+                            Icon(Icons.Filled.ContentCopy, contentDescription = "Copy note content")
+                        }
+                    }
                     IconButton(onClick = viewModel::toggleFavorite) {
                         Icon(
                             if (isFavorite) Icons.Filled.Star else Icons.Outlined.StarBorder,
@@ -157,6 +181,9 @@ fun NoteEditScreen(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                             )
                         }
+                        items(attachments.filter { it.mimeType.startsWith("image/") || it.mimeType.startsWith("video/") }, key = { it.id }) { attachment ->
+                            AttachmentMediaPreview(attachment.localPath, attachment.mimeType, attachment.fileName)
+                        }
                     }
                 }
             }
@@ -176,9 +203,9 @@ fun NoteEditScreen(
                         Text("Add")
                     }
                     DropdownMenu(expanded = attachMenuExpanded, onDismissRequest = { attachMenuExpanded = false }) {
-                        DropdownMenuItem(text = { Text("Photo / Image") }, onClick = {
+                        DropdownMenuItem(text = { Text("Photo / Video") }, onClick = {
                             attachMenuExpanded = false
-                            imagePicker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            imagePicker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
                         })
                         DropdownMenuItem(text = { Text("Any file") }, onClick = {
                             attachMenuExpanded = false
@@ -274,5 +301,98 @@ fun NoteEditScreen(
             onConfirm = { viewModel.removeAttachment(attachment); removeAttachmentTarget = null },
             onDismiss = { removeAttachmentTarget = null }
         )
+    }
+}
+
+@Composable
+private fun AttachmentMediaPreview(localPath: String, mimeType: String, fileName: String) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (mimeType.startsWith("image/")) {
+            AsyncImage(
+                model = File(localPath),
+                contentDescription = fileName,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxWidth().aspectRatio(4f / 3f).clip(RoundedCornerShape(8.dp)),
+            )
+        } else if (mimeType.startsWith("video/")) {
+            AttachmentVideoPreview(localPath)
+        }
+        Text(fileName, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun AttachmentVideoPreview(localPath: String) {
+    var isPlaying by remember(localPath) { mutableStateOf(false) }
+    var videoView by remember(localPath) { mutableStateOf<VideoView?>(null) }
+    var poster by remember(localPath) { mutableStateOf<Bitmap?>(null) }
+
+    LaunchedEffect(localPath) {
+        poster = withContext(Dispatchers.IO) { extractVideoPoster(File(localPath)) }
+    }
+
+    if (isPlaying) {
+        DisposableEffect(Unit) {
+            onDispose { videoView?.stopPlayback() }
+        }
+        AndroidView(
+            factory = { context ->
+                VideoView(context).apply {
+                    val controller = MediaController(context)
+                    controller.setAnchorView(this)
+                    setMediaController(controller)
+                    setVideoURI(Uri.fromFile(File(localPath)))
+                    setOnPreparedListener { it.start() }
+                    videoView = this
+                }
+            },
+            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(8.dp)),
+        )
+    } else {
+        Surface(
+            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
+            shape = RoundedCornerShape(8.dp),
+            color = Color.Black,
+        ) {
+            Box {
+                poster?.let { frame ->
+                    Image(
+                        bitmap = frame.asImageBitmap(),
+                        contentDescription = "Video preview",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+                IconButton(
+                    onClick = { isPlaying = true },
+                    modifier = Modifier.align(androidx.compose.ui.Alignment.Center),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = Color.Black.copy(alpha = 0.65f),
+                        contentColor = Color.White,
+                    ),
+                ) {
+                    Icon(Icons.Filled.PlayArrow, contentDescription = "Play video")
+                }
+            }
+        }
+    }
+}
+
+private fun extractVideoPoster(file: File): Bitmap? {
+    val retriever = MediaMetadataRetriever()
+    return try {
+        retriever.setDataSource(file.absolutePath)
+        val frame = retriever.getFrameAtTime(0, MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: return null
+        val scale = minOf(1f, 1280f / frame.width, 720f / frame.height)
+        if (scale == 1f) frame else Bitmap.createScaledBitmap(
+            frame,
+            (frame.width * scale).toInt().coerceAtLeast(1),
+            (frame.height * scale).toInt().coerceAtLeast(1),
+            true,
+        ).also { frame.recycle() }
+    } catch (_: Exception) {
+        null
+    } finally {
+        retriever.release()
     }
 }

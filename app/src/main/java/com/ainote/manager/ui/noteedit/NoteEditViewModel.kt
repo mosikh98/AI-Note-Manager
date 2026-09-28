@@ -186,7 +186,7 @@ class NoteEditViewModel(app: Application) : AndroidViewModel(app) {
     // ---- Export ----
     fun exportAndShare(format: ExportFormat) {
         val context = getApplication<Application>()
-        NoteExporter.exportAndShare(context, currentNoteSnapshot(), format)
+        NoteExporter.exportAndShare(context, currentNoteSnapshot(), format, _attachments.value)
     }
 
     private fun currentNoteSnapshot() = NoteEntity(
