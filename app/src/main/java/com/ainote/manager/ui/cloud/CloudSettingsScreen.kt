@@ -1,5 +1,6 @@
 package com.ainote.manager.ui.cloud
 
+import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -138,6 +139,7 @@ private fun CloudConfigEditorDialog(
     var secret by remember { mutableStateOf(existingSecret ?: "") }
     var showSecret by remember { mutableStateOf(false) }
     var accountLabel by remember { mutableStateOf(existing?.accountLabel) }
+    var signInError by remember { mutableStateOf<String?>(null) }
     var makeActive by remember { mutableStateOf(existing == null || existing.isActive) }
     val testState by viewModel.testState.collectAsState()
 
@@ -145,8 +147,14 @@ private fun CloudConfigEditorDialog(
         try {
             val account = GoogleSignIn.getSignedInAccountFromIntent(result.data).getResult(com.google.android.gms.common.api.ApiException::class.java)
             accountLabel = GoogleDriveService.extractAccountEmail(account)
+            signInError = null
         } catch (e: Exception) {
-            // Sign-in was cancelled or failed — leave accountLabel as-is so the user can retry.
+            val statusCode = (e as? com.google.android.gms.common.api.ApiException)?.statusCode
+            signInError = when {
+                statusCode == 10 -> "Google OAuth setup mismatch. Register com.ainote.manager with this build's SHA-1 in Google Cloud Console."
+                result.resultCode == Activity.RESULT_CANCELED -> "Google sign-in was cancelled. Try again when ready."
+                else -> "Google sign-in failed${statusCode?.let { " (code $it)" } ?: ""}: ${e.localizedMessage ?: "Please try again."}"
+            }
         }
     }
 
@@ -176,11 +184,20 @@ private fun CloudConfigEditorDialog(
                                 Spacer(Modifier.width(6.dp))
                                 Text("Connected: $accountLabel", style = MaterialTheme.typography.bodyMedium)
                             }
-                            TextButton(onClick = { signInLauncher.launch(GoogleDriveService.signInIntent(context)) }) { Text("Switch account") }
+                            TextButton(onClick = {
+                                accountLabel = null
+                                signInError = null
+                                GoogleDriveService.signInClient(context).signOut().addOnCompleteListener {
+                                    signInLauncher.launch(GoogleDriveService.signInIntent(context))
+                                }
+                            }) { Text("Switch account") }
                         } else {
                             Button(onClick = { signInLauncher.launch(GoogleDriveService.signInIntent(context)) }) {
                                 Text("Connect Google account")
                             }
+                        }
+                        signInError?.let { error ->
+                            Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                         }
                     }
                     CloudProviderType.DROPBOX -> {

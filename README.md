@@ -124,6 +124,10 @@ Settings ⚙️ → **AI Provider Settings** → **+**:
 
 You can save several configs and tap **Use** to switch the active one at any time.
 
+Open the **Appearance** tab in Settings to choose system/light/dark mode, an accent color,
+a background, and a comfortable text size. Choices are saved on-device and apply throughout
+the app.
+
 ## Configuring cloud backup (in-app)
 
 Settings ⚙️ → **Cloud Backup** tab → **Add cloud destination**, then pick a provider:
